@@ -255,7 +255,6 @@ function ProfilePage() {
           {rows.map(([title, detail, Icon]) => (
             <button key={String(title)} className="flex w-full items-center justify-between gap-4 py-4 text-left" type="button">
               <span className="flex items-center gap-3">
-                {/* @ts-expect-error icon tuple */}
                 <Icon size={20} className="text-arcblue" aria-hidden="true" />
                 <span>
                   <span className="block font-black text-white">{String(title)}</span>
