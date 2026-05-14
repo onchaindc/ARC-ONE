@@ -8,7 +8,7 @@ import { arcTestnet } from "@/lib/arc";
 
 const wagmiConfig = createConfig({
   chains: [arcTestnet],
-  connectors: [injected({ target: "metaMask" }), injected()],
+  connectors: [injected()],
   transports: {
     [arcTestnet.id]: http(arcTestnet.rpcUrls.default.http[0])
   },

@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, Bell, ChevronDown, Power, Wallet } from "lucide-react";
+import { formatUnits } from "viem";
 import { useAccount, useBalance, useChainId, useConnect, useDisconnect, useSwitchChain } from "wagmi";
 import { ARC_CHAIN_ID, arcTestnet } from "@/lib/arc";
 import { shortAddress } from "@/lib/utils";
@@ -16,6 +17,7 @@ export function WalletControls() {
   const { switchChain } = useSwitchChain();
   const { data: balance } = useBalance({ address, chainId: ARC_CHAIN_ID, query: { enabled: Boolean(address) } });
   const wrongNetwork = isConnected && chainId !== ARC_CHAIN_ID;
+  const formattedBalance = balance ? Number(formatUnits(balance.value, balance.decimals)).toFixed(4) : null;
 
   if (!isConnected) {
     return (
@@ -45,7 +47,7 @@ export function WalletControls() {
         </div>
         <div className="hidden sm:block">
           <p className="text-xs font-bold text-white">{shortAddress(address)}</p>
-          <p className="text-[11px] text-muted">{balance ? `${Number(balance.formatted).toFixed(4)} ${balance.symbol}` : arcTestnet.name}</p>
+          <p className="text-[11px] text-muted">{balance ? `${formattedBalance} ${balance.symbol}` : arcTestnet.name}</p>
         </div>
         <ChevronDown size={16} className="text-muted" aria-hidden="true" />
       </div>
