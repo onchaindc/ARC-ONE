@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import "@solana/wallet-adapter-react-ui/styles.css";
 import "./globals.css";
-import { WalletContextProvider } from "@/components/WalletContextProvider";
+import { Providers } from "@/app/providers";
 
 export const metadata: Metadata = {
-  title: "Private Friend Finder",
-  description: "Find mutual friends with local contacts, Arcium-ready private set intersection, and Solana proof logging."
+  title: "ARC ONE",
+  description: "A premium crypto finance super app for payments, trading, AI money workflows, and Arc Testnet."
 };
 
 export default function RootLayout({
@@ -16,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <WalletContextProvider>{children}</WalletContextProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
