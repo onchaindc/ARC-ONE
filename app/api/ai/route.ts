@@ -28,6 +28,28 @@ function safeParse<T>(value: string, fallback: T): T {
   }
 }
 
+async function parseProviderError(response: Response) {
+  const fallback = { message: "AI provider request failed.", code: "provider_error" };
+  try {
+    const payload = (await response.json()) as {
+      error?: { message?: string; code?: string };
+    };
+    const code = payload?.error?.code ?? fallback.code;
+    if (code === "invalid_api_key") {
+      return {
+        message: "Invalid OPENAI_API_KEY configured on server. Update your Vercel environment variable and redeploy.",
+        code
+      };
+    }
+    return {
+      message: payload?.error?.message ?? fallback.message,
+      code
+    };
+  } catch {
+    return fallback;
+  }
+}
+
 async function resolveUsername(origin: string, username: string) {
   const response = await fetch(`${origin}/api/usernames?username=${encodeURIComponent(username)}`);
   if (!response.ok) {
@@ -38,7 +60,7 @@ async function resolveUsername(origin: string, username: string) {
 }
 
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {
     return NextResponse.json({ error: "OPENAI_API_KEY is not configured." }, { status: 500 });
   }
@@ -133,8 +155,8 @@ export async function POST(request: NextRequest) {
   });
 
   if (!firstPassResponse.ok) {
-    const errorText = await firstPassResponse.text();
-    return NextResponse.json({ error: `AI provider error: ${errorText}` }, { status: 502 });
+    const providerError = await parseProviderError(firstPassResponse);
+    return NextResponse.json({ error: providerError.message, code: providerError.code }, { status: 502 });
   }
 
   const firstPass = (await firstPassResponse.json()) as {
@@ -207,8 +229,8 @@ export async function POST(request: NextRequest) {
   });
 
   if (!finalResponse.ok || !finalResponse.body) {
-    const errorText = await finalResponse.text();
-    return NextResponse.json({ error: `AI provider error: ${errorText}` }, { status: 502 });
+    const providerError = await parseProviderError(finalResponse);
+    return NextResponse.json({ error: providerError.message, code: providerError.code }, { status: 502 });
   }
 
   const encoder = new TextEncoder();

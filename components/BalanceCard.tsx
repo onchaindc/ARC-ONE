@@ -50,7 +50,7 @@ export function BalanceCard({
         <div className="flex flex-col gap-2 sm:items-end">
           <Button variant="secondary" onClick={onRefresh} disabled={!address || loading}>
             <RefreshCw size={17} className={loading ? "animate-spin" : ""} aria-hidden="true" />
-            Retry Balance Sync
+            Refresh Balance
           </Button>
           {empty ? (
             <>

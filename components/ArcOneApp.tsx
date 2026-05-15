@@ -55,6 +55,7 @@ export function ArcOneApp() {
   const [status, setStatus] = useState("");
   const [faucetLoading, setFaucetLoading] = useState(false);
   const [restoringSession, setRestoringSession] = useState(true);
+  const [dismissWrongNetwork, setDismissWrongNetwork] = useState(false);
   const { address: externalAddress, isConnected } = useAccount();
   const network = useNetworkStatus();
   const {
@@ -72,6 +73,10 @@ export function ArcOneApp() {
     profile
   } = useAppStore();
   const address = (walletMode === "embedded" ? embeddedAddress : externalAddress ?? activeAddress) ?? null;
+  const networkBadge =
+    walletMode === "embedded"
+      ? { label: arcTestnet.name, tone: "good" as const }
+      : network.badge;
 
   useEffect(() => {
     applyTheme(preferences.theme);
@@ -99,6 +104,12 @@ export function ArcOneApp() {
   useEffect(() => {
     void refreshBalance();
   }, [address]);
+
+  useEffect(() => {
+    if (!network.wrongNetwork) {
+      setDismissWrongNetwork(false);
+    }
+  }, [network.wrongNetwork]);
 
   async function refreshBalance() {
     if (!address) {
@@ -161,15 +172,40 @@ export function ArcOneApp() {
         <Header
           onCreateWallet={() => setPanel("wallets")}
           onLogout={handleLogout}
-          networkBadge={network.badge}
+          networkBadge={networkBadge}
           networkSyncing={network.syncing}
           onAddArcNetwork={() => void network.addNetwork()}
           onSwitchArcNetwork={() => void network.switchNetwork()}
         />
         {status ? <div className="mb-5 rounded-2xl border border-line bg-white/[0.06] p-3 text-sm font-bold text-white/82">{status}</div> : null}
         <motion.div key={active} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-          {active === "home" ? <HomePage address={address} balance={balance} loading={loadingBalance} faucetLoading={faucetLoading} onAction={setModal} onRefresh={() => void refreshBalance()} onFaucet={claimFaucet} /> : null}
-          {active === "pay" ? <PaymentsPage onAction={setModal} onPanel={setPanel} /> : null}
+          {active === "home" ? <HomePage address={address} balance={balance} loading={loadingBalance} faucetLoading={faucetLoading} onAction={(action) => {
+            if (action === "Swap") {
+              setActive("trade");
+              setStatus("Opened swap interface.");
+              return;
+            }
+            if (action === "Receive") {
+              setModal("Receive");
+              return;
+            }
+            if (action === "Pay Merchant") {
+              setModal("Pay Merchant");
+              return;
+            }
+            setModal("Send");
+          }} onRefresh={() => void refreshBalance()} onFaucet={claimFaucet} /> : null}
+          {active === "pay" ? <PaymentsPage onAction={(action) => {
+            if (action === "QR Payment" || action === "Payment Link") {
+              setModal("Receive");
+              return;
+            }
+            if (action === "Merchant Checkout") {
+              setModal("Pay Merchant");
+              return;
+            }
+            setModal("Send");
+          }} onPanel={setPanel} /> : null}
           {active === "trade" ? <TradePage balance={balance} /> : null}
           {active === "ai" ? <AIChatPanel address={address} balance={balance} username={profile.username} activities={activities} invoices={invoices} onPreparePayment={() => setModal("AI Payment")} onPrepareInvoice={() => setPanel("invoice")} /> : null}
           {active === "profile" ? <ProfilePage address={address} onPanel={setPanel} /> : null}
@@ -179,14 +215,15 @@ export function ArcOneApp() {
         open={Boolean(modal)}
         mode={modal}
         balance={balance}
-        networkLabel={network.badge.label}
+        address={address}
+        networkLabel={networkBadge.label}
         onArc={walletMode === "embedded" ? true : network.onArc}
         onRequireSwitch={() => void network.switchNetwork()}
         onRefresh={() => void refreshBalance()}
         onClose={() => setModal("")}
       />
       <SettingsPanel panel={panel} onClose={() => setPanel(null)} onAddArcNetwork={() => void network.addNetwork()} />
-      <WrongNetworkModal open={walletMode === "external" && network.wrongNetwork} onSwitch={() => void network.switchNetwork()} onAddNetwork={() => void network.addNetwork()} />
+      <WrongNetworkModal open={walletMode === "external" && network.wrongNetwork && !dismissWrongNetwork} onSwitch={() => void network.switchNetwork()} onAddNetwork={() => void network.addNetwork()} onClose={() => setDismissWrongNetwork(true)} />
     </div>
   );
 }
@@ -289,7 +326,7 @@ function HomePage({
 function PaymentsPage({ onAction, onPanel }: { onAction: (action: string) => void; onPanel: (panel: Panel) => void }) {
   const sendOptions: Array<[string, LucideIcon, string]> = [
     ["Wallet address", Wallet, "Send by Wallet"],
-    ["Payment link", Link, "Payment Link"],
+    ["Receive link", Link, "Payment Link"],
     ["QR code", QrCode, "QR Payment"]
   ];
 
@@ -307,6 +344,10 @@ function PaymentsPage({ onAction, onPanel }: { onAction: (action: string) => voi
               </button>
             ))}
           </div>
+          <Button className="mt-5" onClick={() => onAction("Merchant Checkout")}>
+            <CreditCard size={16} aria-hidden="true" />
+            Pay Merchant
+          </Button>
         </Card>
         <InvoiceBuilder />
       </section>
@@ -356,8 +397,8 @@ function ProfilePage({ address, onPanel }: { address: string; onPanel: (panel: P
   return (
     <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
       <Card className="p-5">
-        <div className="flex items-center gap-4">
-          <WalletAvatar label={profile.username || "A1"} />
+      <div className="flex items-center gap-4">
+          <WalletAvatar label={profile.username || "AO"} />
           <div>
             <h1 className="text-2xl font-black">{profile.username || "Unnamed account"}</h1>
             <p className="text-muted">{address}</p>
@@ -531,8 +572,15 @@ function SettingsPanel({ panel, onClose, onAddArcNetwork }: { panel: Panel; onCl
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-end bg-black/60 p-3 backdrop-blur-sm sm:place-items-center">
-      <Card className="max-h-[90vh] w-full max-w-xl overflow-y-auto p-5">
+    <div
+      className="fixed inset-0 z-50 grid place-items-end bg-black/60 p-3 backdrop-blur-sm sm:place-items-center"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <Card className="max-h-[90vh] w-full max-w-xl overflow-y-auto p-5" onMouseDown={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between">
         <h2 className="text-2xl font-black capitalize">{String(panel).replace("-", " ")}</h2>
           <Button size="icon" variant="ghost" onClick={onClose}>x</Button>
@@ -622,18 +670,27 @@ function SettingsPanel({ panel, onClose, onAddArcNetwork }: { panel: Panel; onCl
 function WrongNetworkModal({
   open,
   onSwitch,
-  onAddNetwork
+  onAddNetwork,
+  onClose
 }: {
   open: boolean;
   onSwitch: () => void;
   onAddNetwork: () => void;
+  onClose: () => void;
 }) {
   if (!open) {
     return null;
   }
   return (
-    <div className="fixed inset-0 z-50 grid place-items-end bg-black/60 p-3 backdrop-blur-sm sm:place-items-center">
-      <Card className="w-full max-w-md p-5">
+    <div
+      className="fixed inset-0 z-50 grid place-items-end bg-black/60 p-3 backdrop-blur-sm sm:place-items-center"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <Card className="w-full max-w-md p-5" onMouseDown={(event) => event.stopPropagation()}>
         <h2 className="text-xl font-black">You are connected to Ethereum.</h2>
         <p className="mt-2 text-sm text-muted">Switch to Arc Testnet to continue.</p>
         <div className="mt-5 grid gap-2 sm:grid-cols-2">

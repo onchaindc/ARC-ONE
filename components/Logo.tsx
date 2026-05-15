@@ -35,7 +35,7 @@ export function ArcMark({ className }: { className?: string }) {
 }
 
 export function WalletAvatar({ label }: { label?: string }) {
-  const initials = label?.trim().slice(0, 2).toUpperCase() || "A1";
+  const initials = label?.trim().slice(0, 2).toUpperCase() || "AO";
 
   return (
     <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/15 bg-gradient-to-br from-arcblue to-arcpurple text-xs font-black text-white shadow-glow">
