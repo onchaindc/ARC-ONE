@@ -1,6 +1,6 @@
 # ARC ONE
 
-ARC ONE is a premium mobile-first crypto finance super app concept for Arc Testnet. It combines portfolio, payments, merchant checkout, swap flows, username payments, and an AI finance copilot in a polished Next.js App Router codebase.
+ARC ONE is a premium mobile-first crypto finance super app for Arc Testnet. It combines embedded wallet onboarding, live RPC balance sync, payments, merchant invoices, profile settings, and an action-preparing finance copilot.
 
 ## Stack
 
@@ -10,7 +10,9 @@ ARC ONE is a premium mobile-first crypto finance super app concept for Arc Testn
 - Wagmi + Viem
 - Zustand-ready app structure
 - Arc Testnet chain config and RPC integration
-- Mock Arc SDK boundary for swaps, sends, and merchant payments
+- Embedded wallet creation with encrypted local key storage
+- Real Arc Testnet RPC balance and native transfer paths
+- Honest swap architecture that disables execution until a verified router is configured
 - Placeholder API routes for usernames and merchant invoices
 
 ## Arc Testnet
@@ -26,12 +28,12 @@ See [lib/arc.ts](./lib/arc.ts) for the chain config and mock Arc SDK integration
 
 ## Product Surface
 
-- Home dashboard with portfolio balance, quick actions, assets, activity feed, market snapshot, banners, and trust indicators
-- Payments hub with send, request, QR, merchant checkout, split bill, and subscriptions
-- Trade hub with swap widget, live quote mock, route preview, watchlist, and advanced coming-soon features
-- AI assistant that recommends finance actions but requires user confirmation before transactions
-- Profile, username registry, wallet/security settings, referrals, support, and theme controls
-- Merchant mini-dashboard with links, invoices, QR checkout, history, and settlement state
+- Home dashboard starts empty, syncs real wallet balance, and records activity only from user actions
+- Payments hub validates balance and recipient, signs with embedded or external wallets, and surfaces tx hashes
+- Trade hub previews route constraints and refuses to fake swaps without a configured router
+- AI assistant reads wallet context, balances, invoices, and activity, then opens confirmation-first flows
+- Profile settings open functional panels for username, security, wallets, notifications, theme, referrals, and support
+- Merchant invoice builder generates local invoice records and payment links
 
 ## API Routes
 
@@ -40,7 +42,7 @@ See [lib/arc.ts](./lib/arc.ts) for the chain config and mock Arc SDK integration
 - `GET /api/merchant/invoices`
 - `POST /api/merchant/invoices`
 
-The current backend is intentionally mock-first. `lib/db.ts` includes Supabase/PostgreSQL environment detection and a starter username table schema for production wiring.
+The current backend is persistence-ready. `lib/db.ts` includes Supabase/PostgreSQL environment detection and starter schemas for usernames, invoices, activities, and user preferences.
 
 ## Run
 

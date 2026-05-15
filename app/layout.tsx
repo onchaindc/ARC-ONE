@@ -4,7 +4,10 @@ import { Providers } from "@/app/providers";
 
 export const metadata: Metadata = {
   title: "ARC ONE",
-  description: "A premium crypto finance super app for payments, trading, AI money workflows, and Arc Testnet."
+  description: "A premium crypto finance super app for payments, trading, AI money workflows, and Arc Testnet.",
+  icons: {
+    icon: "/icon.svg"
+  }
 };
 
 export default function RootLayout({

@@ -13,17 +13,14 @@ import {
   Moon,
   QrCode,
   ReceiptText,
-  Search,
   Settings2,
   Share2,
-  Sparkles,
-  UsersRound,
   Wallet,
   Zap
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useState } from "react";
-import { useAccount, useConnect } from "wagmi";
+import { useEffect, useState } from "react";
+import { useAccount } from "wagmi";
 import { AIChatPanel } from "@/components/AIChatPanel";
 import { AssetTable } from "@/components/AssetTable";
 import { BalanceCard } from "@/components/BalanceCard";
@@ -33,19 +30,90 @@ import { PaymentModal } from "@/components/PaymentModal";
 import { QuickActionGrid } from "@/components/QuickActionGrid";
 import { SwapWidget } from "@/components/SwapWidget";
 import { WalletControls } from "@/components/WalletControls";
+import { WalletOnboarding } from "@/components/WalletOnboarding";
+import { ArcLogo, WalletAvatar } from "@/components/Logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { activities, banners, markets, NavId, roadmap, trustItems } from "@/lib/demo-data";
+import { NavId, roadmap, trustItems } from "@/lib/demo-data";
+import { useAppStore } from "@/lib/app-store";
+import { getNativeBalance } from "@/lib/chain";
+import { applyTheme } from "@/lib/theme";
+import { arcTestnet, ARC_EXPLORER_URL } from "@/lib/arc";
+
+type Panel = "username" | "security" | "wallets" | "notifications" | "theme" | "referrals" | "support" | "invoice" | "coming-soon" | null;
 
 export function ArcOneApp() {
   const [active, setActive] = useState<NavId>("home");
   const [modal, setModal] = useState("");
-  const [preview, setPreview] = useState(false);
-  const { isConnected } = useAccount();
+  const [panel, setPanel] = useState<Panel>(null);
+  const [balance, setBalance] = useState("0");
+  const [loadingBalance, setLoadingBalance] = useState(false);
+  const [status, setStatus] = useState("");
+  const { address: externalAddress, isConnected } = useAccount();
+  const {
+    walletMode,
+    embeddedAddress,
+    activeAddress,
+    setActiveAddress,
+    setWalletMode,
+    upsertWallet,
+    activities,
+    invoices,
+    addActivity,
+    preferences
+  } = useAppStore();
+  const address = (walletMode === "embedded" ? embeddedAddress : externalAddress ?? activeAddress) ?? null;
 
-  if (!isConnected && !preview) {
-    return <Onboarding onPreview={() => setPreview(true)} />;
+  useEffect(() => {
+    applyTheme(preferences.theme);
+  }, [preferences.theme]);
+
+  useEffect(() => {
+    if (isConnected && externalAddress) {
+      setWalletMode("external");
+      setActiveAddress(externalAddress);
+      upsertWallet({ address: externalAddress, label: "External wallet", mode: "external", primary: true });
+    }
+  }, [externalAddress, isConnected, setActiveAddress, setWalletMode, upsertWallet]);
+
+  useEffect(() => {
+    void refreshBalance();
+  }, [address]);
+
+  async function refreshBalance() {
+    if (!address) {
+      setBalance("0");
+      return;
+    }
+    setLoadingBalance(true);
+    try {
+      const nextBalance = await getNativeBalance(address);
+      setBalance(nextBalance.formatted);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unable to sync Arc Testnet balance.");
+    } finally {
+      setLoadingBalance(false);
+    }
+  }
+
+  function claimFaucet() {
+    if (!address) {
+      setStatus("Create or connect a wallet before opening the faucet.");
+      return;
+    }
+    addActivity({
+      type: "faucet",
+      title: "Faucet requested",
+      detail: `Open faucet for ${address}`,
+      status: "pending"
+    });
+    setStatus("Opening Arc faucet guide. After claiming funds, retry balance sync.");
+    window.open(ARC_EXPLORER_URL, "_blank", "noopener,noreferrer");
+  }
+
+  if (!address) {
+    return <Onboarding onDone={() => void refreshBalance()} />;
   }
 
   return (
@@ -53,112 +121,94 @@ export function ArcOneApp() {
       <SidebarNav active={active} onChange={setActive} />
       <BottomNav active={active} onChange={setActive} />
       <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
-        <Header />
+        <Header onCreateWallet={() => setPanel("wallets")} />
+        {status ? <div className="mb-5 rounded-2xl border border-line bg-white/[0.06] p-3 text-sm font-bold text-white/82">{status}</div> : null}
         <motion.div key={active} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-          {active === "home" ? <HomePage onAction={setModal} /> : null}
-          {active === "pay" ? <PaymentsPage onAction={setModal} /> : null}
-          {active === "trade" ? <TradePage /> : null}
-          {active === "ai" ? <AIPage /> : null}
-          {active === "profile" ? <ProfilePage /> : null}
+          {active === "home" ? <HomePage address={address} balance={balance} loading={loadingBalance} onAction={setModal} onRefresh={() => void refreshBalance()} onFaucet={claimFaucet} /> : null}
+          {active === "pay" ? <PaymentsPage onAction={setModal} onPanel={setPanel} /> : null}
+          {active === "trade" ? <TradePage balance={balance} /> : null}
+          {active === "ai" ? <AIChatPanel address={address} balance={balance} activities={activities} invoices={invoices} onPreparePayment={() => setModal("AI Payment")} onPrepareInvoice={() => setPanel("invoice")} /> : null}
+          {active === "profile" ? <ProfilePage address={address} onPanel={setPanel} /> : null}
         </motion.div>
       </main>
-      <PaymentModal open={Boolean(modal)} mode={modal} onClose={() => setModal("")} />
+      <PaymentModal open={Boolean(modal)} mode={modal} balance={balance} onRefresh={() => void refreshBalance()} onClose={() => setModal("")} />
+      <SettingsPanel panel={panel} onClose={() => setPanel(null)} />
     </div>
   );
 }
 
-function Onboarding({ onPreview }: { onPreview: () => void }) {
-  const { connectors, connect, isPending } = useConnect();
-  const connector = connectors[0];
-
+function Onboarding({ onDone }: { onDone: () => void }) {
   return (
     <main className="min-h-screen px-4 py-5 sm:px-6">
-      <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] max-w-7xl flex-col">
-        <Header />
-        <section className="grid flex-1 items-center gap-10 py-12 lg:grid-cols-[0.95fr_1.05fr]">
-          <div>
-            <Badge className="border-arcblue/30 bg-arcblue/10 text-arcblue">Powered by Arc Testnet</Badge>
-            <h1 className="mt-5 max-w-3xl text-5xl font-black tracking-normal text-white sm:text-7xl">Your All-in-One Crypto Finance App</h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
-              Hold, swap, send, request, and pay merchants with a clean non-custodial finance experience built for mass adoption.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button onClick={() => connector && connect({ connector })} disabled={isPending || !connector}>
-                <Wallet size={18} aria-hidden="true" />
-                Connect Wallet
-              </Button>
-              <Button variant="secondary" onClick={onPreview}>
-                <Sparkles size={18} aria-hidden="true" />
-                Preview App
-              </Button>
-            </div>
-            <div className="mt-8 flex flex-wrap gap-3">
-              {trustItems.map((item) => (
-                <Badge key={item.label}>
-                  <item.icon size={14} aria-hidden="true" />
-                  {item.label}
-                </Badge>
-              ))}
-            </div>
+      <div className="mx-auto grid min-h-[calc(100vh-2.5rem)] max-w-7xl items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
+        <div>
+          <ArcLogo />
+          <Badge className="mt-8 border-arcblue/30 bg-arcblue/10 text-arcblue">Powered by Arc Testnet</Badge>
+          <h1 className="mt-5 max-w-3xl text-5xl font-black tracking-normal text-white sm:text-7xl">Your crypto finance operating system.</h1>
+          <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
+            Start empty, create a secure wallet, claim testnet funds, then send, invoice, and manage real Arc Testnet activity.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            {trustItems.map((item) => (
+              <Badge key={item.label}>
+                <item.icon size={14} aria-hidden="true" />
+                {item.label}
+              </Badge>
+            ))}
           </div>
-          <div className="relative">
-            <div className="absolute -inset-8 rounded-[2rem] bg-gradient-to-br from-arcblue/20 via-arcpurple/20 to-transparent blur-3xl" />
-            <Card className="relative overflow-hidden p-4">
-              <BalanceCard />
-              <div className="mt-4">
-                <QuickActionGrid onAction={() => undefined} />
-              </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                {markets.map((market) => (
-                  <MarketCard key={market.symbol} {...market} />
-                ))}
-              </div>
-            </Card>
-          </div>
-        </section>
+        </div>
+        <WalletOnboarding onDone={onDone} />
       </div>
     </main>
   );
 }
 
-function Header() {
+function Header({ onCreateWallet }: { onCreateWallet: () => void }) {
   return (
     <header className="mb-5 flex items-center justify-between gap-3">
-      <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-sm font-black text-black">A1</div>
-        <div>
-          <p className="text-xl font-black text-white">ARC ONE</p>
-          <p className="text-xs font-bold text-muted">Arc Testnet finance OS</p>
-        </div>
-      </div>
-      <WalletControls />
+      <ArcLogo className="min-w-0" />
+      <WalletControls onCreateWallet={onCreateWallet} />
     </header>
   );
 }
 
-function HomePage({ onAction }: { onAction: (action: string) => void }) {
+function HomePage({
+  address,
+  balance,
+  loading,
+  onAction,
+  onRefresh,
+  onFaucet
+}: {
+  address: string | null;
+  balance: string;
+  loading: boolean;
+  onAction: (action: string) => void;
+  onRefresh: () => void;
+  onFaucet: () => void;
+}) {
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_23rem]">
       <section className="space-y-5">
-        <BalanceCard />
+        <BalanceCard address={address} balance={balance} symbol={arcTestnet.nativeCurrency.symbol} loading={loading} onRefresh={onRefresh} onFaucet={onFaucet} />
         <QuickActionGrid onAction={onAction} />
-        <AssetTable />
+        <AssetTable balance={balance} symbol={arcTestnet.nativeCurrency.symbol} />
         <ActivityFeed />
       </section>
       <aside className="space-y-5">
-        <MarketSnapshot />
-        <BannerCarousel />
+        <NetworkPanel onRefresh={onRefresh} />
+        <RoadmapWall />
         <TrustPanel />
       </aside>
     </div>
   );
 }
 
-function PaymentsPage({ onAction }: { onAction: (action: string) => void }) {
-  const sendOptions: Array<[string, LucideIcon]> = [
-    ["Username", Search],
-    ["Wallet address", Wallet],
-    ["QR code", QrCode]
+function PaymentsPage({ onAction, onPanel }: { onAction: (action: string) => void; onPanel: (panel: Panel) => void }) {
+  const sendOptions: Array<[string, LucideIcon, string]> = [
+    ["Wallet address", Wallet, "Send by Wallet"],
+    ["Payment link", Link, "Payment Link"],
+    ["QR code", QrCode, "QR Payment"]
   ];
 
   return (
@@ -166,99 +216,79 @@ function PaymentsPage({ onAction }: { onAction: (action: string) => void }) {
       <section className="space-y-5">
         <Card className="p-5">
           <h1 className="text-2xl font-black">Payments Hub</h1>
-          <p className="mt-2 text-muted">Send by username, wallet address, QR code, invoice, or merchant checkout.</p>
+          <p className="mt-2 text-muted">Validate, preview, sign, and record payments. No fake success states.</p>
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            {sendOptions.map(([label, Icon]) => (
-              <button key={String(label)} className="focus-ring rounded-2xl border border-line bg-white/[0.06] p-4 text-left font-black text-white hover:bg-white/10" type="button" onClick={() => onAction(`Send by ${label}`)}>
+            {sendOptions.map(([label, Icon, action]) => (
+              <button key={label} className="focus-ring rounded-2xl border border-line bg-white/[0.06] p-4 text-left font-black text-white hover:bg-white/10" type="button" onClick={() => onAction(action)}>
                 <Icon className="mb-4" size={22} aria-hidden="true" />
-                {String(label)}
+                {label}
               </button>
             ))}
           </div>
         </Card>
-        <Card className="p-5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-black">Merchant Checkout</h2>
-            <Badge>Beta</Badge>
-          </div>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-2 text-sm font-bold text-muted">Invoice amount<input className="rounded-2xl border border-line bg-black/20 px-4 py-3 text-white outline-none" defaultValue="89.00" /></label>
-            <label className="grid gap-2 text-sm font-bold text-muted">Settlement token<select className="rounded-2xl border border-line bg-surface px-4 py-3 text-white outline-none" defaultValue="USDC"><option>USDC</option><option>EURC</option></select></label>
-          </div>
-          <div className="mt-4 rounded-2xl border border-line bg-white/[0.06] p-4 text-sm text-muted">
-            User pays ETH. Merchant receives USDC. Quote and route are prepared through Arc liquidity tooling.
-          </div>
-          <Button className="mt-5" onClick={() => onAction("Merchant Checkout")}>
-            <CreditCard size={18} aria-hidden="true" />
-            Generate Checkout
-          </Button>
-        </Card>
+        <InvoiceBuilder />
       </section>
       <aside className="space-y-5">
-        <MerchantDashboard />
-        <ComingSoonCard title="Split Bill" body="Create shared payment requests with live settlement status." />
-        <ComingSoonCard title="Subscriptions" body="Recurring crypto payments for memberships, payroll, and SaaS." />
+        <MerchantDashboard onPanel={onPanel} />
+        <ComingSoonCard title="Split Bill" body="Preview group payment requests and settlement rules before this feature ships." />
+        <ComingSoonCard title="Subscriptions" body="Recurring crypto approvals will require explicit user spending limits." />
       </aside>
     </div>
   );
 }
 
-function TradePage() {
+function TradePage({ balance }: { balance: string }) {
   return (
     <div className="grid gap-5 lg:grid-cols-[24rem_1fr]">
-      <SwapWidget />
+      <SwapWidget balance={balance} symbol={arcTestnet.nativeCurrency.symbol} />
       <section className="space-y-5">
-        <MarketSnapshot />
         <Card className="p-5">
-          <h2 className="text-xl font-black">Watchlist</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            {markets.map((market) => <MarketCard key={market.symbol} {...market} />)}
+          <h2 className="text-xl font-black">Markets</h2>
+          <div className="mt-4 rounded-2xl border border-dashed border-line bg-black/20 p-6 text-center">
+            <p className="font-black text-white">No market feed configured.</p>
+            <p className="mt-2 text-sm leading-6 text-muted">Connect a real price indexer before showing movers, charts, or analytics.</p>
           </div>
         </Card>
         <div className="grid gap-3 sm:grid-cols-3">
-          <ComingSoonCard title="Limit Orders" body="Set precise entries with protected execution." />
-          <ComingSoonCard title="DCA Orders" body="Automate recurring buys with clean risk controls." />
-          <ComingSoonCard title="Price Alerts" body="Push alerts and AI watch summaries." />
+          <ComingSoonCard title="Limit Orders" body="Will open a routed order ticket once router contracts are configured." />
+          <ComingSoonCard title="DCA Orders" body="Will schedule recurring signed swaps with explicit user approval." />
+          <ComingSoonCard title="Price Alerts" body="Will persist notification rules and trigger alerts from a live market feed." />
         </div>
-        <RoadmapWall />
       </section>
     </div>
   );
 }
 
-function AIPage() {
-  return <AIChatPanel />;
-}
-
-function ProfilePage() {
-  const rows: Array<[string, string, LucideIcon]> = [
-    ["Username management", "@onchaindc", KeyRound],
-    ["Security settings", "Passkeys, approvals, spending limits", LockKeyhole],
-    ["Connected wallets", "Primary EVM wallet", Wallet],
-    ["Notification settings", "Push, email, merchant alerts", Bell],
-    ["Theme switcher", "Dark mode default", Moon],
-    ["Referral rewards", "Launch rewards soon", Share2],
-    ["Support center", "Priority crypto finance help", LifeBuoy]
+function ProfilePage({ address, onPanel }: { address: string; onPanel: (panel: Panel) => void }) {
+  const { profile } = useAppStore();
+  const rows: Array<[Panel, string, string, LucideIcon]> = [
+    ["username", "Username management", profile.username || "Claim a username", KeyRound],
+    ["security", "Security settings", "Passcode, export, approvals", LockKeyhole],
+    ["wallets", "Connected wallets", "Manage embedded and external wallets", Wallet],
+    ["notifications", "Notification settings", "Persist alert preferences", Bell],
+    ["theme", "Theme switcher", "Dark, light, or system", Moon],
+    ["referrals", "Referral rewards", "Coming soon", Share2],
+    ["support", "Support center", "Help, FAQ, report issue", LifeBuoy]
   ];
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
       <Card className="p-5">
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-arcblue to-arcpurple text-lg font-black">DC</div>
+          <WalletAvatar label={profile.username || "A1"} />
           <div>
-            <h1 className="text-2xl font-black">@onchaindc</h1>
-            <p className="text-muted">0x7adf...b8a2</p>
+            <h1 className="text-2xl font-black">{profile.username || "Unnamed account"}</h1>
+            <p className="text-muted">{address}</p>
           </div>
         </div>
         <div className="mt-6 divide-y divide-line">
-          {rows.map(([title, detail, Icon]) => (
-            <button key={String(title)} className="flex w-full items-center justify-between gap-4 py-4 text-left" type="button">
+          {rows.map(([panel, title, detail, Icon]) => (
+            <button key={title} className="flex w-full items-center justify-between gap-4 py-4 text-left" type="button" onClick={() => onPanel(panel)}>
               <span className="flex items-center gap-3">
                 <Icon size={20} className="text-arcblue" aria-hidden="true" />
                 <span>
-                  <span className="block font-black text-white">{String(title)}</span>
-                  <span className="text-sm text-muted">{String(detail)}</span>
+                  <span className="block font-black text-white">{title}</span>
+                  <span className="text-sm text-muted">{detail}</span>
                 </span>
               </span>
               <Settings2 size={18} className="text-muted" aria-hidden="true" />
@@ -267,18 +297,11 @@ function ProfilePage() {
         </div>
       </Card>
       <Card className="p-5">
-        <h2 className="text-xl font-black">Username Registry</h2>
-        <p className="mt-2 text-sm leading-6 text-muted">Search, claim, and resolve handles to wallet addresses through the placeholder backend registry.</p>
-        <div className="mt-5 rounded-2xl border border-line bg-black/20 p-4">
-          <p className="text-xs font-bold uppercase text-muted">Claimed handle</p>
-          <div className="mt-3 flex items-center justify-between">
-            <span className="text-lg font-black">@onchaindc</span>
-            <CheckCircle2 size={20} className="text-gain" aria-hidden="true" />
-          </div>
-        </div>
-        <Button className="mt-5 w-full" variant="secondary">
+        <h2 className="text-xl font-black">Account Status</h2>
+        <p className="mt-2 text-sm leading-6 text-muted">Your profile is stored locally and ready for backend persistence through the username API.</p>
+        <Button className="mt-5 w-full" variant="secondary" onClick={() => void navigator.clipboard.writeText(address)}>
           <Copy size={18} aria-hidden="true" />
-          Copy Profile Link
+          Copy Wallet Address
         </Button>
       </Card>
     </div>
@@ -286,63 +309,104 @@ function ProfilePage() {
 }
 
 function ActivityFeed() {
+  const { activities } = useAppStore();
   return (
     <Card className="p-4">
       <h2 className="mb-3 text-lg font-black">Activity</h2>
-      {activities.map((activity) => (
-        <div key={activity.title} className="flex items-center justify-between gap-3 rounded-2xl p-3 hover:bg-white/[0.06]">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-black">
-              <activity.icon size={18} aria-hidden="true" />
-            </span>
+      {activities.length ? (
+        activities.map((activity) => (
+          <div key={activity.id} className="flex items-center justify-between gap-3 rounded-2xl p-3 hover:bg-white/[0.06]">
             <div>
               <p className="font-black">{activity.title}</p>
-              <p className="text-sm text-muted">{activity.subtitle}</p>
+              <p className="text-sm text-muted">{activity.detail}</p>
             </div>
+            <Badge className={activity.status === "failed" ? "text-loss" : activity.status === "confirmed" ? "text-gain" : ""}>{activity.status}</Badge>
           </div>
-          <div className="text-right">
-            <p className="font-black">{activity.amount}</p>
-            <p className="text-xs font-bold text-muted">{activity.status}</p>
-          </div>
+        ))
+      ) : (
+        <div className="rounded-2xl border border-dashed border-line bg-black/20 p-6 text-center">
+          <p className="font-black text-white">No transactions yet.</p>
+          <p className="mt-2 text-sm leading-6 text-muted">Payments, faucet requests, invoices, and future swaps will appear here after real user actions.</p>
         </div>
-      ))}
+      )}
     </Card>
   );
 }
 
-function MarketSnapshot() {
+function NetworkPanel({ onRefresh }: { onRefresh: () => void }) {
   return (
     <Card className="p-4">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-black">Market Snapshot</h2>
+        <h2 className="text-lg font-black">Arc Testnet</h2>
         <Zap size={18} className="text-arcblue" aria-hidden="true" />
       </div>
-      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-        {markets.map((market) => <MarketCard key={market.symbol} {...market} />)}
+      <div className="space-y-3 text-sm text-muted">
+        <p>RPC: {arcTestnet.rpcUrls.default.http[0]}</p>
+        <p>Chain ID: {arcTestnet.id}</p>
       </div>
+      <Button className="mt-4 w-full" variant="secondary" onClick={onRefresh}>Sync Wallet</Button>
     </Card>
   );
 }
 
-function MarketCard({ symbol, price, change }: { symbol: string; price: string; change: number }) {
+function InvoiceBuilder() {
+  const { addInvoice } = useAppStore();
+  const [amount, setAmount] = useState("");
+  const [token, setToken] = useState(arcTestnet.nativeCurrency.symbol);
+  const [settlementToken, setSettlementToken] = useState(arcTestnet.nativeCurrency.symbol);
+  const [expiry, setExpiry] = useState("24h");
+  const [link, setLink] = useState("");
+
+  function createInvoice() {
+    if (!Number(amount)) {
+      return;
+    }
+    const invoice = addInvoice({ amount, token, settlementToken, expiry });
+    setLink(invoice.paymentLink);
+  }
+
   return (
-    <div className="rounded-2xl border border-line bg-white/[0.06] p-4">
+    <Card className="p-5">
       <div className="flex items-center justify-between">
-        <span className="font-black">{symbol}</span>
-        <span className={change >= 0 ? "text-sm font-bold text-gain" : "text-sm font-bold text-loss"}>{change >= 0 ? "+" : ""}{change}%</span>
+        <h2 className="text-xl font-black">Create Invoice</h2>
+        <Badge>Live Local Record</Badge>
       </div>
-      <p className="mt-3 text-2xl font-black">{price}</p>
-    </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <label className="grid gap-2 text-sm font-bold text-muted">Amount<input className="rounded-2xl border border-line bg-black/20 px-4 py-3 text-white outline-none" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.00" /></label>
+        <label className="grid gap-2 text-sm font-bold text-muted">Token<input className="rounded-2xl border border-line bg-black/20 px-4 py-3 text-white outline-none" value={token} onChange={(event) => setToken(event.target.value)} /></label>
+        <label className="grid gap-2 text-sm font-bold text-muted">Settlement token<input className="rounded-2xl border border-line bg-black/20 px-4 py-3 text-white outline-none" value={settlementToken} onChange={(event) => setSettlementToken(event.target.value)} /></label>
+        <label className="grid gap-2 text-sm font-bold text-muted">Expiry<input className="rounded-2xl border border-line bg-black/20 px-4 py-3 text-white outline-none" value={expiry} onChange={(event) => setExpiry(event.target.value)} /></label>
+      </div>
+      <Button className="mt-5" onClick={createInvoice} disabled={!Number(amount)}>
+        <ReceiptText size={18} aria-hidden="true" />
+        Generate Invoice
+      </Button>
+      {link ? <div className="mt-4 rounded-2xl border border-line bg-white/[0.06] p-3 text-sm font-bold text-white/82">{link}</div> : null}
+    </Card>
   );
 }
 
-function BannerCarousel() {
+function MerchantDashboard({ onPanel }: { onPanel: (panel: Panel) => void }) {
+  const { invoices } = useAppStore();
   return (
-    <div className="grid gap-3">
-      {banners.map((banner) => (
-        <ComingSoonCard key={banner.title} title={banner.title} body={banner.body} badge={banner.badge} />
-      ))}
-    </div>
+    <Card className="p-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-black">Merchant Tools</h2>
+        <Badge>Active</Badge>
+      </div>
+      <div className="mt-4 grid gap-3">
+        <button className="flex items-center gap-3 rounded-2xl border border-line bg-white/[0.06] p-3 text-sm font-black text-white hover:bg-white/10" type="button" onClick={() => onPanel("invoice")}>
+          <ReceiptText size={18} className="text-arcblue" aria-hidden="true" />
+          Create invoices
+        </button>
+        {invoices.length ? invoices.map((invoice) => (
+          <div key={invoice.id} className="rounded-2xl border border-line bg-black/20 p-3 text-sm">
+            <p className="font-black text-white">{invoice.amount} {invoice.token}</p>
+            <p className="text-muted">{invoice.status} · {invoice.expiry}</p>
+          </div>
+        )) : <p className="rounded-2xl border border-dashed border-line p-4 text-sm text-muted">No merchant settlements found.</p>}
+      </div>
+    </Card>
   );
 }
 
@@ -362,39 +426,92 @@ function TrustPanel() {
   );
 }
 
-function MerchantDashboard() {
-  const tools: Array<[string, LucideIcon]> = [
-    ["Payment links", Link],
-    ["Create invoices", ReceiptText],
-    ["QR checkout", QrCode],
-    ["Payment history", CreditCard],
-    ["Settlement status", CheckCircle2]
-  ];
-
+function RoadmapWall() {
   return (
-    <Card className="p-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-black">Merchant Tools</h2>
-        <Badge>Beta</Badge>
-      </div>
-      <div className="mt-4 grid gap-3">
-        {tools.map(([label, Icon]) => (
-          <button key={String(label)} className="flex items-center gap-3 rounded-2xl border border-line bg-white/[0.06] p-3 text-sm font-black text-white hover:bg-white/10" type="button">
-            <Icon size={18} className="text-arcblue" aria-hidden="true" />
-            {String(label)}
-          </button>
-        ))}
-      </div>
-    </Card>
+    <div className="grid gap-3">
+      {roadmap.slice(0, 4).map((item) => (
+        <ComingSoonCard key={item} title={item} body="Opens as a preview surface until backend contracts and data feeds are configured." />
+      ))}
+    </div>
   );
 }
 
-function RoadmapWall() {
+function SettingsPanel({ panel, onClose }: { panel: Panel; onClose: () => void }) {
+  const { profile, updateProfile, preferences, updatePreferences, wallets, setPrimaryWallet, removeWallet } = useAppStore();
+  const [username, setUsername] = useState(profile.username);
+  const [supportMessage, setSupportMessage] = useState("");
+
+  if (!panel) {
+    return null;
+  }
+
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {roadmap.map((item) => (
-        <ComingSoonCard key={item} title={item} body="Roadmap feature prepared in the ARC ONE product surface." />
-      ))}
+    <div className="fixed inset-0 z-50 grid place-items-end bg-black/60 p-3 backdrop-blur-sm sm:place-items-center">
+      <Card className="max-h-[90vh] w-full max-w-xl overflow-y-auto p-5">
+        <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-black capitalize">{String(panel).replace("-", " ")}</h2>
+          <Button size="icon" variant="ghost" onClick={onClose}>×</Button>
+        </div>
+        {panel === "username" ? (
+          <div className="mt-5 grid gap-3">
+            <input className="rounded-2xl border border-line bg-black/20 px-4 py-3 text-white outline-none" value={username} onChange={(event) => setUsername(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))} placeholder="username" />
+            <Button onClick={() => updateProfile({ username })} disabled={username.length < 3}>Claim Username</Button>
+          </div>
+        ) : null}
+        {panel === "security" ? (
+          <div className="mt-5 grid gap-3">
+            <Toggle label="Biometric unlock" checked={preferences.security.biometrics} onChange={(biometrics) => updatePreferences({ security: { ...preferences.security, biometrics } })} />
+            <Toggle label="Require transaction approvals" checked={preferences.security.requireApproval} onChange={(requireApproval) => updatePreferences({ security: { ...preferences.security, requireApproval } })} />
+            <input className="rounded-2xl border border-line bg-black/20 px-4 py-3 text-white outline-none" value={preferences.security.approvalLimit} onChange={(event) => updatePreferences({ security: { ...preferences.security, approvalLimit: event.target.value } })} />
+          </div>
+        ) : null}
+        {panel === "wallets" ? (
+          <div className="mt-5 grid gap-3">
+            {wallets.length ? wallets.map((wallet) => (
+              <div key={wallet.address} className="rounded-2xl border border-line bg-black/20 p-3">
+                <p className="font-black text-white">{wallet.label}</p>
+                <p className="break-all text-sm text-muted">{wallet.address}</p>
+                <div className="mt-3 flex gap-2">
+                  <Button size="sm" variant="secondary" onClick={() => setPrimaryWallet(wallet.address)}>Set Primary</Button>
+                  <Button size="sm" variant="danger" onClick={() => removeWallet(wallet.address)}>Remove</Button>
+                </div>
+              </div>
+            )) : <p className="text-muted">No connected wallets.</p>}
+          </div>
+        ) : null}
+        {panel === "notifications" ? (
+          <div className="mt-5 grid gap-3">
+            {Object.entries(preferences.notifications).map(([key, value]) => (
+              <Toggle key={key} label={key} checked={value} onChange={(checked) => updatePreferences({ notifications: { ...preferences.notifications, [key]: checked } })} />
+            ))}
+          </div>
+        ) : null}
+        {panel === "theme" ? (
+          <div className="mt-5 grid grid-cols-3 gap-2">
+            {(["dark", "light", "system"] as const).map((theme) => (
+              <Button key={theme} variant={preferences.theme === theme ? "primary" : "secondary"} onClick={() => updatePreferences({ theme })}>{theme}</Button>
+            ))}
+          </div>
+        ) : null}
+        {panel === "referrals" || panel === "coming-soon" ? <ComingSoonCard title="Coming Soon" body="This feature has a dedicated preview surface and will activate when its backend is ready." /> : null}
+        {panel === "support" ? (
+          <div className="mt-5 grid gap-3">
+            <p className="text-sm text-muted">FAQ: Wallet creation, faucet claims, payments, invoices, and safety approvals.</p>
+            <textarea className="min-h-28 rounded-2xl border border-line bg-black/20 p-4 text-white outline-none" value={supportMessage} onChange={(event) => setSupportMessage(event.target.value)} placeholder="Report an issue..." />
+            <Button disabled={!supportMessage}>Submit Support Request</Button>
+          </div>
+        ) : null}
+        {panel === "invoice" ? <InvoiceBuilder /> : null}
+      </Card>
     </div>
+  );
+}
+
+function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
+  return (
+    <label className="flex items-center justify-between rounded-2xl border border-line bg-white/[0.06] p-3 text-sm font-bold text-white">
+      {label}
+      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+    </label>
   );
 }

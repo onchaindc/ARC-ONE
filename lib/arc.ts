@@ -50,22 +50,14 @@ export async function createArcAppKit() {
 
 export async function getArcSwapQuote({ tokenIn, tokenOut, amountIn }: ArcSwapParams) {
   const amount = Number(amountIn || 0);
-  const rate = tokenIn === "ETH" ? 3265 : tokenIn === "WBTC" ? 102240 : tokenIn === "EURC" ? 1.08 : 1;
-  const outputRate = tokenOut === "ETH" ? 1 / 3265 : tokenOut === "WBTC" ? 1 / 102240 : tokenOut === "EURC" ? 0.92 : 1;
-  const estimate = amount * rate * outputRate * 0.997;
 
   return {
-    amountOut: estimate.toLocaleString("en-US", { maximumFractionDigits: tokenOut === "USDC" ? 2 : 6 }),
-    fee: "$0.03",
+    amountOut: amount > 0 && tokenIn === tokenOut ? amount.toString() : "",
+    fee: "Unavailable",
     route: `${tokenIn} -> Arc liquidity -> ${tokenOut}`,
-    poweredBy: "Circle App Kit on Arc Testnet"
-  };
-}
-
-export async function mockArcSend({ to, amount, token }: ArcSendParams) {
-  return {
-    hash: `0xarc${crypto.randomUUID().replaceAll("-", "").slice(0, 28)}`,
-    explorerUrl: `${ARC_EXPLORER_URL}/tx/0xarc-demo`,
-    message: `Prepared ${amount} ${token} transfer to ${to} on Arc Testnet.`
+    executable: false,
+    reason:
+      "ARC ONE is connected to Arc Testnet RPC, but no production swap router contract is configured yet. Execution is disabled until a verified router address is added.",
+    poweredBy: "Arc Testnet RPC"
   };
 }

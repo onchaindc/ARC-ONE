@@ -28,9 +28,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   return NextResponse.json({
-    invoices: [
-      { id: "arc_demo_01", amount: "89.00", settlementToken: "USDC", status: "paid" },
-      { id: "arc_demo_02", amount: "240.00", settlementToken: "USDC", status: "pending" }
-    ]
+    invoices: [],
+    storage: "Configure Supabase or PostgreSQL to persist merchant invoice history."
   });
 }
