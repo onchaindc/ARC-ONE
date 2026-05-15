@@ -41,7 +41,7 @@ export function PaymentModal({
   const [merchantToken, setMerchantToken] = useState<string>(arcTestnet.nativeCurrency.symbol);
   const [requestLink, setRequestLink] = useState("");
   const [copied, setCopied] = useState(false);
-  const { walletMode, addActivity } = useAppStore();
+  const { walletMode, addActivity, updateActivity } = useAppStore();
   const { sendTransactionAsync } = useSendTransaction();
   const insufficient = Number(amount || 0) > Number(balance || 0);
   const valid = isAddressLike(recipient) && Number(amount) > 0 && !insufficient;
@@ -77,13 +77,16 @@ export function PaymentModal({
           : { hash: await sendTransactionAsync({ to, value, chainId: ARC_CHAIN_ID }), explorerUrl: "" };
       setHash(result.hash);
       setStatus("Transaction submitted. Waiting for Arc Testnet indexing.");
-      addActivity({
+      const created = addActivity({
         type: "payment",
         title: "Payment submitted",
         detail: `${amount} ${arcTestnet.nativeCurrency.symbol} to ${recipient}`,
         hash: result.hash,
         status: "pending"
       });
+      window.setTimeout(() => {
+        updateActivity(created.id, { status: "confirmed", title: "Payment confirmed" });
+      }, 2200);
       onRefresh();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Payment failed before submission.");

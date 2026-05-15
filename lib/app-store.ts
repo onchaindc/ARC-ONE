@@ -75,7 +75,7 @@ type AppState = {
   setPrimaryWallet: (address: `0x${string}`) => void;
   updateProfile: (profile: Partial<UserProfile>) => void;
   updatePreferences: (preferences: Partial<Preferences>) => void;
-  addActivity: (activity: Omit<Activity, "id" | "createdAt">) => void;
+  addActivity: (activity: Omit<Activity, "id" | "createdAt">) => Activity;
   updateActivity: (id: string, activity: Partial<Activity>) => void;
   addInvoice: (invoice: Omit<Invoice, "id" | "paymentLink" | "createdAt" | "status">) => Invoice;
 };
@@ -140,16 +140,17 @@ export const useAppStore = create<AppState>()(
           }
         })),
       addActivity: (activity) =>
-        set((state) => ({
-          activities: [
-            {
-              ...activity,
-              id: crypto.randomUUID(),
-              createdAt: new Date().toISOString()
-            },
-            ...state.activities
-          ]
-        })),
+        {
+          const created: Activity = {
+            ...activity,
+            id: crypto.randomUUID(),
+            createdAt: new Date().toISOString()
+          };
+          set((state) => ({
+            activities: [created, ...state.activities]
+          }));
+          return created;
+        },
       updateActivity: (id, activity) =>
         set((state) => ({
           activities: state.activities.map((item) => (item.id === id ? { ...item, ...activity } : item))

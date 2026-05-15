@@ -21,7 +21,6 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import { AIChatPanel } from "@/components/AIChatPanel";
 import { AssetTable } from "@/components/AssetTable";
 import { BalanceCard } from "@/components/BalanceCard";
 import { BottomNav, SidebarNav } from "@/components/Navigation";
@@ -133,7 +132,7 @@ export function ArcOneApp() {
       return;
     }
     setFaucetLoading(true);
-    addActivity({
+    const created = addActivity({
       type: "faucet",
       title: "Faucet requested",
       detail: `Open faucet for ${address}`,
@@ -141,7 +140,14 @@ export function ArcOneApp() {
     });
     setStatus("Opening Circle faucet in a new tab.");
     window.open("https://faucet.circle.com", "_blank", "noopener,noreferrer");
-    window.setTimeout(() => setFaucetLoading(false), 1200);
+    window.setTimeout(() => {
+      setFaucetLoading(false);
+      useAppStore.getState().updateActivity(created.id, {
+        status: "confirmed",
+        title: "Faucet opened",
+        detail: "Faucet link opened. Refresh balance after funding."
+      });
+    }, 1200);
   }
 
   function handleLogout() {
@@ -207,7 +213,13 @@ export function ArcOneApp() {
             setModal("Send");
           }} onPanel={setPanel} /> : null}
           {active === "trade" ? <TradePage balance={balance} /> : null}
-          {active === "ai" ? <AIChatPanel address={address} balance={balance} username={profile.username} activities={activities} invoices={invoices} onPreparePayment={() => setModal("AI Payment")} onPrepareInvoice={() => setPanel("invoice")} /> : null}
+          {active === "ai" ? (
+            <ComingSoonCard
+              title="ARC AI"
+              badge="Coming Soon"
+              body="AI assistant is temporarily paused while we complete reliability and safety upgrades. It will return with stronger payment and portfolio workflows."
+            />
+          ) : null}
           {active === "profile" ? <ProfilePage address={address} onPanel={setPanel} /> : null}
         </motion.div>
       </main>
@@ -464,7 +476,7 @@ function NetworkPanel({ onRefresh }: { onRefresh: () => void }) {
         <Zap size={18} className="text-arcblue" aria-hidden="true" />
       </div>
       <div className="space-y-3 text-sm text-muted">
-        <p>RPC: {arcTestnet.rpcUrls.default.http[0]}</p>
+        <p>Network: {arcTestnet.name}</p>
         <p>Chain ID: {arcTestnet.id}</p>
       </div>
       <Button className="mt-4 w-full" variant="secondary" onClick={onRefresh}>Sync Wallet</Button>

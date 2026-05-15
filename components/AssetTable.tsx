@@ -24,7 +24,7 @@ export function AssetTable({ balance, symbol }: { balance: string; symbol: strin
             </div>
             <div className="text-right">
               <p className="font-black text-white">{Number(balance).toLocaleString("en-US", { maximumFractionDigits: 6 })}</p>
-              <p className="text-sm font-bold text-muted">Live RPC balance</p>
+              <p className="text-sm font-bold text-muted">Balance</p>
             </div>
           </div>
         </div>

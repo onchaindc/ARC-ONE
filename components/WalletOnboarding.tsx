@@ -17,7 +17,10 @@ export function WalletOnboarding({ onDone }: { onDone: () => void }) {
   const [error, setError] = useState("");
   const { connectors, connect, isPending } = useConnect();
   const { setWalletMode, setEmbeddedAddress, upsertWallet } = useAppStore();
-  const connector = connectors[0];
+  const injectedConnector = connectors.find((item) => item.type === "injected");
+  const walletConnectConnector = connectors.find((item) => item.type === "walletConnect");
+  const mobile = typeof window !== "undefined" && /android|iphone|ipad|ipod/i.test(window.navigator.userAgent);
+  const connector = (mobile ? walletConnectConnector : injectedConnector) ?? injectedConnector ?? walletConnectConnector ?? connectors[0];
   const storedWallet = getEmbeddedWalletRecord();
 
   async function createWallet() {
@@ -56,7 +59,7 @@ export function WalletOnboarding({ onDone }: { onDone: () => void }) {
 
   function connectWallet() {
     if (!connector) {
-      setError("No injected wallet was found in this browser.");
+      setError("No wallet connector is available. Configure WalletConnect project ID or install an injected wallet.");
       return;
     }
     setWalletMode("external");

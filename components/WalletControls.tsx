@@ -28,7 +28,10 @@ export function WalletControls({
 }) {
   const { address, isConnected } = useAccount();
   const { connectors, connect, isPending } = useConnect();
-  const connector = connectors[0];
+  const injectedConnector = connectors.find((item) => item.type === "injected");
+  const walletConnectConnector = connectors.find((item) => item.type === "walletConnect");
+  const mobile = typeof window !== "undefined" && /android|iphone|ipad|ipod/i.test(window.navigator.userAgent);
+  const connector = (mobile ? walletConnectConnector : injectedConnector) ?? injectedConnector ?? walletConnectConnector ?? connectors[0];
   const { disconnect } = useDisconnect();
   const { walletMode, embeddedAddress } = useAppStore();
   const [open, setOpen] = useState(false);
