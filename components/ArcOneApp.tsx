@@ -352,8 +352,8 @@ function NetworkPanel({ onRefresh }: { onRefresh: () => void }) {
 function InvoiceBuilder() {
   const { addInvoice } = useAppStore();
   const [amount, setAmount] = useState("");
-  const [token, setToken] = useState(arcTestnet.nativeCurrency.symbol);
-  const [settlementToken, setSettlementToken] = useState(arcTestnet.nativeCurrency.symbol);
+  const [token, setToken] = useState<string>(arcTestnet.nativeCurrency.symbol);
+  const [settlementToken, setSettlementToken] = useState<string>(arcTestnet.nativeCurrency.symbol);
   const [expiry, setExpiry] = useState("24h");
   const [link, setLink] = useState("");
 

@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 const tokens = ["USDC", "ETH", "WBTC", "EURC"];
 
 export function SwapWidget({ balance, symbol }: { balance: string; symbol: string }) {
-  const [from, setFrom] = useState(symbol || "USDC");
+  const [from, setFrom] = useState<string>(symbol || "USDC");
   const [to, setTo] = useState("ETH");
   const [amount, setAmount] = useState("");
   const [slippage, setSlippage] = useState("0.5");
