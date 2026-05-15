@@ -32,6 +32,7 @@ const WORDS = [
 
 export type EmbeddedWalletRecord = {
   address: `0x${string}`;
+  email: string;
   encryptedPrivateKey: string;
   encryptedRecoveryPhrase: string;
   salt: string;
@@ -85,9 +86,12 @@ async function decryptText(value: string, passcode: string, salt: Uint8Array, iv
   return new TextDecoder().decode(decrypted);
 }
 
-export async function createEmbeddedWallet(passcode: string) {
+export async function createEmbeddedWallet(passcode: string, email: string) {
   if (passcode.length < 6) {
     throw new Error("Use at least 6 digits or characters for the wallet passcode.");
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim().toLowerCase())) {
+    throw new Error("Enter a valid email address.");
   }
 
   const privateKeyBytes = new Uint8Array(32);
@@ -100,6 +104,7 @@ export async function createEmbeddedWallet(passcode: string) {
 
   const record: EmbeddedWalletRecord = {
     address: account.address,
+    email: email.trim().toLowerCase(),
     encryptedPrivateKey: await encryptText(privateKey, passcode, salt, iv),
     encryptedRecoveryPhrase: await encryptText(recoveryPhrase, passcode, salt, iv),
     salt: bytesToHex(salt),
@@ -118,6 +123,10 @@ export function getEmbeddedWalletRecord(): EmbeddedWalletRecord | null {
   }
 
   return JSON.parse(raw) as EmbeddedWalletRecord;
+}
+
+export function hasEmbeddedWallet() {
+  return Boolean(getEmbeddedWalletRecord());
 }
 
 export async function unlockEmbeddedWallet(passcode: string) {

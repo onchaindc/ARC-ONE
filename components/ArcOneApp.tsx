@@ -39,7 +39,9 @@ import { NavId, roadmap, trustItems } from "@/lib/demo-data";
 import { useAppStore } from "@/lib/app-store";
 import { getNativeBalance } from "@/lib/chain";
 import { applyTheme } from "@/lib/theme";
-import { arcTestnet, ARC_EXPLORER_URL } from "@/lib/arc";
+import { arcTestnet } from "@/lib/arc";
+import { exportEmbeddedWallet, getEmbeddedWalletRecord } from "@/lib/embedded-wallet";
+import { clearLocalAuthSession, readLocalAuthSession, saveLocalAuthSession } from "@/lib/session";
 
 type Panel = "username" | "security" | "wallets" | "notifications" | "theme" | "referrals" | "support" | "invoice" | "coming-soon" | null;
 
@@ -50,6 +52,8 @@ export function ArcOneApp() {
   const [balance, setBalance] = useState("0");
   const [loadingBalance, setLoadingBalance] = useState(false);
   const [status, setStatus] = useState("");
+  const [faucetLoading, setFaucetLoading] = useState(false);
+  const [restoringSession, setRestoringSession] = useState(true);
   const { address: externalAddress, isConnected } = useAccount();
   const {
     walletMode,
@@ -57,23 +61,37 @@ export function ArcOneApp() {
     activeAddress,
     setActiveAddress,
     setWalletMode,
+    logout,
     upsertWallet,
     activities,
     invoices,
     addActivity,
-    preferences
+    preferences,
+    profile,
+    walletMode: persistedWalletMode
   } = useAppStore();
-  const address = (walletMode === "embedded" ? embeddedAddress : externalAddress ?? activeAddress) ?? null;
+  const address = (walletMode === "embedded" ? embeddedAddress : externalAddress x activeAddress) ?? null;
 
   useEffect(() => {
     applyTheme(preferences.theme);
   }, [preferences.theme]);
 
   useEffect(() => {
+    const session = readLocalAuthSession();
+    const embedded = getEmbeddedWalletRecord();
+    if (session?.mode === "embedded" && embedded && embedded.address.toLowerCase() === session.address.toLowerCase()) {
+      setWalletMode("embedded");
+      setActiveAddress(embedded.address);
+    }
+    setRestoringSession(false);
+  }, [setActiveAddress, setWalletMode]);
+
+  useEffect(() => {
     if (isConnected && externalAddress) {
       setWalletMode("external");
       setActiveAddress(externalAddress);
       upsertWallet({ address: externalAddress, label: "External wallet", mode: "external", primary: true });
+      saveLocalAuthSession({ mode: "external", address: externalAddress, unlockedAt: new Date().toISOString() });
     }
   }, [externalAddress, isConnected, setActiveAddress, setWalletMode, upsertWallet]);
 
@@ -99,17 +117,35 @@ export function ArcOneApp() {
 
   function claimFaucet() {
     if (!address) {
-      setStatus("Create or connect a wallet before opening the faucet.");
+      setStatus("Create or connect a wallet before claiming faucet funds.");
       return;
     }
+    setFaucetLoading(true);
     addActivity({
       type: "faucet",
       title: "Faucet requested",
       detail: `Open faucet for ${address}`,
       status: "pending"
     });
-    setStatus("Opening Arc faucet guide. After claiming funds, retry balance sync.");
-    window.open(ARC_EXPLORER_URL, "_blank", "noopener,noreferrer");
+    setStatus("Opening Circle faucet in a new tab.");
+    window.open("https://faucet.circle.com", "_blank", "noopener,noreferrer");
+    window.setTimeout(() => setFaucetLoading(false), 1200);
+  }
+
+  function handleLogout() {
+    clearLocalAuthSession();
+    logout();
+    setStatus("Session closed. Log in to restore your wallet.");
+  }
+
+  if (restoringSession) {
+    return (
+      <main className="min-h-screen grid place-items-center">
+        <Card className="p-6 text-center">
+          <p className="font-black text-white">Restoring session...</p>
+        </Card>
+      </main>
+    );
   }
 
   if (!address) {
@@ -121,13 +157,13 @@ export function ArcOneApp() {
       <SidebarNav active={active} onChange={setActive} />
       <BottomNav active={active} onChange={setActive} />
       <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
-        <Header onCreateWallet={() => setPanel("wallets")} />
+        <Header onCreateWallet={() => setPanel("wallets")} onLogout={handleLogout} />
         {status ? <div className="mb-5 rounded-2xl border border-line bg-white/[0.06] p-3 text-sm font-bold text-white/82">{status}</div> : null}
         <motion.div key={active} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-          {active === "home" ? <HomePage address={address} balance={balance} loading={loadingBalance} onAction={setModal} onRefresh={() => void refreshBalance()} onFaucet={claimFaucet} /> : null}
+          {active === "home" ? <HomePage address={address} balance={balance} loading={loadingBalance} faucetLoading={faucetLoading} onAction={setModal} onRefresh={() => void refreshBalance()} onFaucet={claimFaucet} /> : null}
           {active === "pay" ? <PaymentsPage onAction={setModal} onPanel={setPanel} /> : null}
           {active === "trade" ? <TradePage balance={balance} /> : null}
-          {active === "ai" ? <AIChatPanel address={address} balance={balance} activities={activities} invoices={invoices} onPreparePayment={() => setModal("AI Payment")} onPrepareInvoice={() => setPanel("invoice")} /> : null}
+          {active === "ai" ? <AIChatPanel address={address} balance={balance} username={profile.username} activities={activities} invoices={invoices} onPreparePayment={() => setModal("AI Payment")} onPrepareInvoice={() => setPanel("invoice")} /> : null}
           {active === "profile" ? <ProfilePage address={address} onPanel={setPanel} /> : null}
         </motion.div>
       </main>
@@ -163,11 +199,11 @@ function Onboarding({ onDone }: { onDone: () => void }) {
   );
 }
 
-function Header({ onCreateWallet }: { onCreateWallet: () => void }) {
+function Header({ onCreateWallet, onLogout }: { onCreateWallet: () => void; onLogout: () => void }) {
   return (
     <header className="mb-5 flex items-center justify-between gap-3">
       <ArcLogo className="min-w-0" />
-      <WalletControls onCreateWallet={onCreateWallet} />
+      <WalletControls onCreateWallet={onCreateWallet} onLogout={onLogout} />
     </header>
   );
 }
@@ -176,6 +212,7 @@ function HomePage({
   address,
   balance,
   loading,
+  faucetLoading,
   onAction,
   onRefresh,
   onFaucet
@@ -183,6 +220,7 @@ function HomePage({
   address: string | null;
   balance: string;
   loading: boolean;
+  faucetLoading: boolean;
   onAction: (action: string) => void;
   onRefresh: () => void;
   onFaucet: () => void;
@@ -190,7 +228,7 @@ function HomePage({
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_23rem]">
       <section className="space-y-5">
-        <BalanceCard address={address} balance={balance} symbol={arcTestnet.nativeCurrency.symbol} loading={loading} onRefresh={onRefresh} onFaucet={onFaucet} />
+        <BalanceCard address={address} balance={balance} symbol={arcTestnet.nativeCurrency.symbol} loading={loading} faucetLoading={faucetLoading} onRefresh={onRefresh} onFaucet={onFaucet} />
         <QuickActionGrid onAction={onAction} />
         <AssetTable balance={balance} symbol={arcTestnet.nativeCurrency.symbol} />
         <ActivityFeed />
@@ -402,7 +440,7 @@ function MerchantDashboard({ onPanel }: { onPanel: (panel: Panel) => void }) {
         {invoices.length ? invoices.map((invoice) => (
           <div key={invoice.id} className="rounded-2xl border border-line bg-black/20 p-3 text-sm">
             <p className="font-black text-white">{invoice.amount} {invoice.token}</p>
-            <p className="text-muted">{invoice.status} · {invoice.expiry}</p>
+            <p className="text-muted">{invoice.status} | {invoice.expiry}</p>
           </div>
         )) : <p className="rounded-2xl border border-dashed border-line p-4 text-sm text-muted">No merchant settlements found.</p>}
       </div>
@@ -440,6 +478,9 @@ function SettingsPanel({ panel, onClose }: { panel: Panel; onClose: () => void }
   const { profile, updateProfile, preferences, updatePreferences, wallets, setPrimaryWallet, removeWallet } = useAppStore();
   const [username, setUsername] = useState(profile.username);
   const [supportMessage, setSupportMessage] = useState("");
+  const [exportPasscode, setExportPasscode] = useState("");
+  const [exportData, setExportData] = useState<{ privateKey: string; recoveryPhrase: string } | null>(null);
+  const [exportError, setExportError] = useState("");
 
   if (!panel) {
     return null;
@@ -463,6 +504,32 @@ function SettingsPanel({ panel, onClose }: { panel: Panel; onClose: () => void }
             <Toggle label="Biometric unlock" checked={preferences.security.biometrics} onChange={(biometrics) => updatePreferences({ security: { ...preferences.security, biometrics } })} />
             <Toggle label="Require transaction approvals" checked={preferences.security.requireApproval} onChange={(requireApproval) => updatePreferences({ security: { ...preferences.security, requireApproval } })} />
             <input className="rounded-2xl border border-line bg-black/20 px-4 py-3 text-white outline-none" value={preferences.security.approvalLimit} onChange={(event) => updatePreferences({ security: { ...preferences.security, approvalLimit: event.target.value } })} />
+            {persistedWalletMode === "embedded" ? (
+              <>
+                <input className="rounded-2xl border border-line bg-black/20 px-4 py-3 text-white outline-none" type="password" value={exportPasscode} onChange={(event) => setExportPasscode(event.target.value)} placeholder="Passcode to export wallet" />
+                <Button
+                  onClick={async () => {
+                    setExportError("");
+                    try {
+                      const exported = await exportEmbeddedWallet(exportPasscode);
+                      setExportData(exported);
+                    } catch (error) {
+                      setExportError(error instanceof Error ? error.message : "Unable to export wallet.");
+                    }
+                  }}
+                  disabled={exportPasscode.length < 6}
+                >
+                  Export Private Key
+                </Button>
+                {exportError ? <p className="text-sm font-bold text-loss">{exportError}</p> : null}
+                {exportData ? (
+                  <div className="rounded-2xl border border-line bg-black/20 p-3 text-xs text-white/90">
+                    <p className="font-bold break-all">Private key: {exportData.privateKey}</p>
+                    <p className="mt-2">Recovery phrase: {exportData.recoveryPhrase}</p>
+                  </div>
+                ) : null}
+              </>
+            ) : null}
           </div>
         ) : null}
         {panel === "wallets" ? (

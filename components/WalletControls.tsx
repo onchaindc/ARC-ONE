@@ -10,14 +10,14 @@ import { WalletAvatar } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-export function WalletControls({ onCreateWallet }: { onCreateWallet: () => void }) {
+export function WalletControls({ onCreateWallet, onLogout }: { onCreateWallet: () => void; onLogout: () => void }) {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { connectors, connect, isPending } = useConnect();
   const connector = connectors[0];
   const { disconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
-  const { walletMode, embeddedAddress, setWalletMode, setActiveAddress } = useAppStore();
+  const { walletMode, embeddedAddress } = useAppStore();
   const activeAddress = walletMode === "embedded" ? embeddedAddress : address ?? null;
   const { data: balance } = useBalance({ address: activeAddress ?? undefined, chainId: ARC_CHAIN_ID, query: { enabled: Boolean(activeAddress) } });
   const wrongNetwork = walletMode === "external" && isConnected && chainId !== ARC_CHAIN_ID;
@@ -30,7 +30,6 @@ export function WalletControls({ onCreateWallet }: { onCreateWallet: () => void 
         <Button
           onClick={() => {
             if (connector) {
-              setWalletMode("external");
               connect({ connector });
             }
           }}
@@ -71,8 +70,7 @@ export function WalletControls({ onCreateWallet }: { onCreateWallet: () => void 
           if (walletMode === "external") {
             disconnect();
           }
-          setWalletMode(null);
-          setActiveAddress(null);
+          onLogout();
         }}
         aria-label="Disconnect wallet"
       >

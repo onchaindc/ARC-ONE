@@ -67,6 +67,7 @@ type AppState = {
   activities: Activity[];
   invoices: Invoice[];
   setWalletMode: (mode: WalletMode) => void;
+  logout: () => void;
   setEmbeddedAddress: (address: `0x${string}` | null) => void;
   setActiveAddress: (address: `0x${string}` | null) => void;
   upsertWallet: (wallet: ConnectedWallet) => void;
@@ -107,6 +108,7 @@ export const useAppStore = create<AppState>()(
       activities: [],
       invoices: [],
       setWalletMode: (walletMode) => set({ walletMode }),
+      logout: () => set({ walletMode: null, activeAddress: null }),
       setEmbeddedAddress: (embeddedAddress) => set({ embeddedAddress, activeAddress: embeddedAddress }),
       setActiveAddress: (activeAddress) => set({ activeAddress }),
       upsertWallet: (wallet) =>

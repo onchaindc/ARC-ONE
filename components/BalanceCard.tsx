@@ -1,11 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { RefreshCw, ShieldCheck } from "lucide-react";
+import { ExternalLink, RefreshCw, ShieldCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ARC_EXPLORER_URL } from "@/lib/arc";
 import { shortAddress } from "@/lib/utils";
 
 export function BalanceCard({
@@ -14,7 +13,8 @@ export function BalanceCard({
   symbol,
   loading,
   onRefresh,
-  onFaucet
+  onFaucet,
+  faucetLoading
 }: {
   address: string | null;
   balance: string;
@@ -22,6 +22,7 @@ export function BalanceCard({
   loading: boolean;
   onRefresh: () => void;
   onFaucet: () => void;
+  faucetLoading: boolean;
 }) {
   const empty = !address || Number(balance) === 0;
 
@@ -53,17 +54,17 @@ export function BalanceCard({
           </Button>
           {empty ? (
             <>
-              <Button onClick={onFaucet} disabled={!address}>Claim Faucet</Button>
-              <a className="text-sm font-bold text-arcblue hover:text-white" href={ARC_EXPLORER_URL} target="_blank" rel="noreferrer">
-                View faucet guide
-              </a>
+              <Button onClick={onFaucet} disabled={!address || faucetLoading}>
+                {faucetLoading ? <RefreshCw size={16} className="animate-spin" aria-hidden="true" /> : <ExternalLink size={16} aria-hidden="true" />}
+                Claim Faucet
+              </Button>
             </>
           ) : null}
         </div>
       </div>
       {empty && address ? (
         <div className="mt-5 rounded-2xl border border-arcblue/25 bg-arcblue/10 p-4 text-sm font-semibold text-white/82">
-          Claim Arc Testnet funds to begin. ARC ONE will refresh your balance after the faucet transaction confirms.
+          Your wallet is empty. Claim Arc Testnet assets to begin.
         </div>
       ) : null}
     </Card>
