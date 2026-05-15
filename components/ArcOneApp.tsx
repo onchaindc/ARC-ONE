@@ -70,7 +70,7 @@ export function ArcOneApp() {
     profile,
     walletMode: persistedWalletMode
   } = useAppStore();
-  const address = (walletMode === "embedded" ? embeddedAddress : externalAddress x activeAddress) ?? null;
+  const address = (walletMode === "embedded" ? embeddedAddress : externalAddress ?? activeAddress) ?? null;
 
   useEffect(() => {
     applyTheme(preferences.theme);
