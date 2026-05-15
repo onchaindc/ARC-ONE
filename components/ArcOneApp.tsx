@@ -67,8 +67,7 @@ export function ArcOneApp() {
     invoices,
     addActivity,
     preferences,
-    profile,
-    walletMode: persistedWalletMode
+    profile
   } = useAppStore();
   const address = (walletMode === "embedded" ? embeddedAddress : externalAddress ?? activeAddress) ?? null;
 
