@@ -475,7 +475,7 @@ function RoadmapWall() {
 }
 
 function SettingsPanel({ panel, onClose }: { panel: Panel; onClose: () => void }) {
-  const { profile, updateProfile, preferences, updatePreferences, wallets, setPrimaryWallet, removeWallet } = useAppStore();
+  const { profile, updateProfile, preferences, updatePreferences, wallets, setPrimaryWallet, removeWallet, walletMode } = useAppStore();
   const [username, setUsername] = useState(profile.username);
   const [supportMessage, setSupportMessage] = useState("");
   const [exportPasscode, setExportPasscode] = useState("");
@@ -504,7 +504,7 @@ function SettingsPanel({ panel, onClose }: { panel: Panel; onClose: () => void }
             <Toggle label="Biometric unlock" checked={preferences.security.biometrics} onChange={(biometrics) => updatePreferences({ security: { ...preferences.security, biometrics } })} />
             <Toggle label="Require transaction approvals" checked={preferences.security.requireApproval} onChange={(requireApproval) => updatePreferences({ security: { ...preferences.security, requireApproval } })} />
             <input className="rounded-2xl border border-line bg-black/20 px-4 py-3 text-white outline-none" value={preferences.security.approvalLimit} onChange={(event) => updatePreferences({ security: { ...preferences.security, approvalLimit: event.target.value } })} />
-            {persistedWalletMode === "embedded" ? (
+            {walletMode === "embedded" ? (
               <>
                 <input className="rounded-2xl border border-line bg-black/20 px-4 py-3 text-white outline-none" type="password" value={exportPasscode} onChange={(event) => setExportPasscode(event.target.value)} placeholder="Passcode to export wallet" />
                 <Button
