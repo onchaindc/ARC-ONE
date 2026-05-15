@@ -1,8 +1,8 @@
 "use client";
 
-import { AlertTriangle, Bell, ChevronDown, Power, Wallet } from "lucide-react";
+import { Bell, ChevronDown, Power, Wallet } from "lucide-react";
 import { formatUnits } from "viem";
-import { useAccount, useBalance, useChainId, useConnect, useDisconnect, useSwitchChain } from "wagmi";
+import { useAccount, useBalance, useConnect, useDisconnect } from "wagmi";
 import { ARC_CHAIN_ID, arcTestnet } from "@/lib/arc";
 import { useAppStore } from "@/lib/app-store";
 import { shortAddress } from "@/lib/utils";
@@ -10,17 +10,28 @@ import { WalletAvatar } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-export function WalletControls({ onCreateWallet, onLogout }: { onCreateWallet: () => void; onLogout: () => void }) {
+export function WalletControls({
+  onCreateWallet,
+  onLogout,
+  networkBadge,
+  networkSyncing,
+  onAddArcNetwork,
+  onSwitchArcNetwork
+}: {
+  onCreateWallet: () => void;
+  onLogout: () => void;
+  networkBadge: { label: string; tone: "good" | "danger" | "syncing" | "muted" };
+  networkSyncing: boolean;
+  onAddArcNetwork: () => void;
+  onSwitchArcNetwork: () => void;
+}) {
   const { address, isConnected } = useAccount();
-  const chainId = useChainId();
   const { connectors, connect, isPending } = useConnect();
   const connector = connectors[0];
   const { disconnect } = useDisconnect();
-  const { switchChain } = useSwitchChain();
   const { walletMode, embeddedAddress } = useAppStore();
   const activeAddress = walletMode === "embedded" ? embeddedAddress : address ?? null;
   const { data: balance } = useBalance({ address: activeAddress ?? undefined, chainId: ARC_CHAIN_ID, query: { enabled: Boolean(activeAddress) } });
-  const wrongNetwork = walletMode === "external" && isConnected && chainId !== ARC_CHAIN_ID;
   const formattedBalance = balance ? Number(formatUnits(balance.value, balance.decimals)).toFixed(4) : null;
 
   if (!activeAddress) {
@@ -47,13 +58,24 @@ export function WalletControls({ onCreateWallet, onLogout }: { onCreateWallet: (
       <button className="focus-ring hidden h-11 w-11 items-center justify-center rounded-2xl border border-line bg-white/[0.08] text-white sm:flex" type="button">
         <Bell size={18} aria-hidden="true" />
       </button>
-      {wrongNetwork ? (
-        <Button variant="danger" onClick={() => switchChain({ chainId: ARC_CHAIN_ID })}>
-          <AlertTriangle size={17} aria-hidden="true" />
-          Switch to Arc
-        </Button>
+      {networkBadge.tone === "danger" ? (
+        <div className="hidden items-center gap-2 sm:flex">
+          <Button variant="danger" size="sm" onClick={onSwitchArcNetwork}>Switch Network</Button>
+          <Button variant="secondary" size="sm" onClick={onAddArcNetwork}>Add Arc Network</Button>
+        </div>
       ) : (
-        <Badge className="hidden border-gain/25 bg-gain/10 text-gain sm:inline-flex">Arc Testnet</Badge>
+        <Badge
+          className={`hidden sm:inline-flex ${
+            networkBadge.tone === "good"
+              ? "border-gain/25 bg-gain/10 text-gain"
+              : networkBadge.tone === "syncing"
+                ? "border-arcblue/25 bg-arcblue/10 text-arcblue"
+                : "border-white/20 bg-white/10 text-white/80"
+          }`}
+        >
+          <span className={`mr-1.5 h-2 w-2 rounded-full ${networkBadge.tone === "good" ? "bg-gain" : networkBadge.tone === "syncing" ? "bg-arcblue animate-pulse" : "bg-white/70"}`} />
+          {networkBadge.label}
+        </Badge>
       )}
       <div className="flex items-center gap-2 rounded-2xl border border-line bg-white/[0.08] px-3 py-2">
         <WalletAvatar />
@@ -73,6 +95,7 @@ export function WalletControls({ onCreateWallet, onLogout }: { onCreateWallet: (
           onLogout();
         }}
         aria-label="Disconnect wallet"
+        disabled={networkSyncing}
       >
         <Power size={18} aria-hidden="true" />
       </Button>

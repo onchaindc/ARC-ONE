@@ -7,7 +7,7 @@ import { parseUnits } from "viem";
 import { sendEmbeddedNativePayment, isAddressLike } from "@/lib/chain";
 import { unlockEmbeddedWallet } from "@/lib/embedded-wallet";
 import { useAppStore } from "@/lib/app-store";
-import { arcTestnet, ARC_EXPLORER_URL } from "@/lib/arc";
+import { ARC_CHAIN_ID, arcTestnet, ARC_EXPLORER_URL } from "@/lib/arc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -16,12 +16,18 @@ export function PaymentModal({
   onClose,
   mode,
   balance,
+  networkLabel,
+  onArc,
+  onRequireSwitch,
   onRefresh
 }: {
   open: boolean;
   onClose: () => void;
   mode: string;
   balance: string;
+  networkLabel: string;
+  onArc: boolean;
+  onRequireSwitch: () => void;
   onRefresh: () => void;
 }) {
   const [recipient, setRecipient] = useState("");
@@ -44,6 +50,10 @@ export function PaymentModal({
       setStatus("Enter a valid wallet address and amount within your available balance.");
       return;
     }
+    if (!onArc) {
+      setStatus("Wrong network detected. Switch to Arc Testnet before signing.");
+      return;
+    }
 
     setBusy(true);
     setStatus("Preparing wallet signature...");
@@ -53,7 +63,7 @@ export function PaymentModal({
       const result =
         walletMode === "embedded"
           ? await sendEmbeddedNativePayment({ privateKey: (await unlockEmbeddedWallet(passcode)).privateKey, to, amount })
-          : { hash: await sendTransactionAsync({ to, value }), explorerUrl: "" };
+          : { hash: await sendTransactionAsync({ to, value, chainId: ARC_CHAIN_ID }), explorerUrl: "" };
       setHash(result.hash);
       setStatus("Transaction submitted. Waiting for Arc Testnet indexing.");
       addActivity({
@@ -84,6 +94,11 @@ export function PaymentModal({
           </Button>
         </div>
         <div className="mt-5 grid gap-3">
+          <div className="rounded-2xl border border-line bg-white/[0.06] p-4 text-sm text-muted">
+            <p>Network: {networkLabel}</p>
+            <p>Estimated fee: wallet estimate at signing</p>
+            <p>Token: {arcTestnet.nativeCurrency.symbol}</p>
+          </div>
           <label className="grid gap-2 text-sm font-bold text-muted">
             Recipient wallet address
             <input className="rounded-2xl border border-line bg-black/20 px-4 py-3 text-base font-bold text-white outline-none" value={recipient} onChange={(event) => setRecipient(event.target.value)} placeholder="0x..." />
@@ -118,11 +133,16 @@ export function PaymentModal({
             <Copy size={18} aria-hidden="true" />
             Copy Payment Link
           </Button>
-          <Button onClick={() => void confirmPayment()} disabled={!valid || busy || (walletMode === "embedded" && passcode.length < 6)}>
+          <Button onClick={() => void confirmPayment()} disabled={!valid || busy || !onArc || (walletMode === "embedded" && passcode.length < 6)}>
             <Send size={18} aria-hidden="true" />
             {busy ? "Submitting..." : "Confirm & Sign"}
           </Button>
         </div>
+        {!onArc ? (
+          <Button className="mt-2 w-full" variant="danger" onClick={onRequireSwitch}>
+            Switch to Arc Testnet
+          </Button>
+        ) : null}
       </Card>
     </div>
   );
