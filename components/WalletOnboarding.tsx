@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, KeyRound, LogIn, Wallet } from "lucide-react";
+import { CheckCircle2, KeyRound, LogIn, Wallet, X } from "lucide-react";
 import { useConnect } from "wagmi";
 import { createEmbeddedWallet, getEmbeddedWalletRecord, unlockEmbeddedWallet } from "@/lib/embedded-wallet";
 import { saveLocalAuthSession } from "@/lib/session";
 import { useAppStore } from "@/lib/app-store";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ARC_CHAIN_ID } from "@/lib/arc";
 
 export function WalletOnboarding({ onDone }: { onDone: () => void }) {
   const [mode, setMode] = useState<"create" | "login">("create");
@@ -15,12 +16,10 @@ export function WalletOnboarding({ onDone }: { onDone: () => void }) {
   const [passcode, setPasscode] = useState("");
   const [recoveryPhrase, setRecoveryPhrase] = useState("");
   const [error, setError] = useState("");
-  const { connectors, connect, isPending } = useConnect();
+  const [openConnectorPicker, setOpenConnectorPicker] = useState(false);
+  const [connectError, setConnectError] = useState("");
+  const { connectors, connectAsync, isPending } = useConnect();
   const { setWalletMode, setEmbeddedAddress, upsertWallet } = useAppStore();
-  const injectedConnector = connectors.find((item) => item.type === "injected");
-  const walletConnectConnector = connectors.find((item) => item.type === "walletConnect");
-  const mobile = typeof window !== "undefined" && /android|iphone|ipad|ipod/i.test(window.navigator.userAgent);
-  const connector = (mobile ? walletConnectConnector : injectedConnector) ?? injectedConnector ?? walletConnectConnector ?? connectors[0];
   const storedWallet = getEmbeddedWalletRecord();
 
   async function createWallet() {
@@ -57,14 +56,16 @@ export function WalletOnboarding({ onDone }: { onDone: () => void }) {
     }
   }
 
-  function connectWallet() {
-    if (!connector) {
-      setError("No wallet connector is available. Configure WalletConnect project ID or install an injected wallet.");
-      return;
+  async function connectWallet(connector: (typeof connectors)[number]) {
+    setError("");
+    setConnectError("");
+    try {
+      await connectAsync({ connector, chainId: ARC_CHAIN_ID });
+      setWalletMode("external");
+      onDone();
+    } catch (connectFailure) {
+      setConnectError(connectFailure instanceof Error ? connectFailure.message : "Unable to connect wallet.");
     }
-    setWalletMode("external");
-    connect({ connector });
-    onDone();
   }
 
   return (
@@ -115,13 +116,43 @@ export function WalletOnboarding({ onDone }: { onDone: () => void }) {
                 Log In
               </Button>
             )}
-            <Button variant="secondary" onClick={connectWallet} disabled={isPending}>
+            <Button variant="secondary" onClick={() => setOpenConnectorPicker(true)} disabled={isPending || !connectors.length}>
               <Wallet size={18} aria-hidden="true" />
               Connect Existing
             </Button>
           </div>
         </div>
       )}
+      {openConnectorPicker ? (
+        <div
+          className="fixed inset-0 z-50 grid place-items-end bg-black/60 p-3 backdrop-blur-sm sm:place-items-center"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setOpenConnectorPicker(false);
+              setConnectError("");
+            }
+          }}
+        >
+          <Card className="w-full max-w-md p-5" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-black">Connect Wallet</h2>
+              <Button size="icon" variant="ghost" onClick={() => setOpenConnectorPicker(false)} aria-label="Close wallet picker">
+                <X size={18} aria-hidden="true" />
+              </Button>
+            </div>
+            <p className="mt-2 text-sm text-muted">Choose a wallet provider.</p>
+            <div className="mt-4 grid gap-2">
+              {connectors.map((connector) => (
+                <Button key={connector.uid} variant="secondary" className="w-full justify-start" onClick={() => void connectWallet(connector)} disabled={isPending}>
+                  <Wallet size={16} aria-hidden="true" />
+                  {connector.name}
+                </Button>
+              ))}
+            </div>
+            {connectError ? <p className="mt-3 rounded-xl border border-loss/25 bg-loss/10 p-3 text-sm font-bold text-loss">{connectError}</p> : null}
+          </Card>
+        </div>
+      ) : null}
     </Card>
   );
 }

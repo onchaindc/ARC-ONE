@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, ChevronDown, Copy, Power, Wallet } from "lucide-react";
+import { CheckCircle2, ChevronDown, Copy, Power, Wallet, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { formatUnits } from "viem";
 import { useAccount, useBalance, useConnect, useDisconnect } from "wagmi";
@@ -10,6 +10,7 @@ import { useAppStore } from "@/lib/app-store";
 import { shortAddress } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 
 export function WalletControls({
   onCreateWallet,
@@ -27,14 +28,12 @@ export function WalletControls({
   onSwitchArcNetwork: () => void;
 }) {
   const { address, isConnected } = useAccount();
-  const { connectors, connect, isPending } = useConnect();
-  const injectedConnector = connectors.find((item) => item.type === "injected");
-  const walletConnectConnector = connectors.find((item) => item.type === "walletConnect");
-  const mobile = typeof window !== "undefined" && /android|iphone|ipad|ipod/i.test(window.navigator.userAgent);
-  const connector = (mobile ? walletConnectConnector : injectedConnector) ?? injectedConnector ?? walletConnectConnector ?? connectors[0];
+  const { connectors, connectAsync, isPending } = useConnect();
   const { disconnect } = useDisconnect();
   const { walletMode, embeddedAddress } = useAppStore();
   const [open, setOpen] = useState(false);
+  const [openConnectorPicker, setOpenConnectorPicker] = useState(false);
+  const [connectError, setConnectError] = useState("");
   const [copied, setCopied] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const activeAddress = walletMode === "embedded" ? embeddedAddress : address ?? null;
@@ -60,17 +59,29 @@ export function WalletControls({
     return (
       <div className="flex items-center gap-2">
         <Button variant="secondary" onClick={onCreateWallet}>Create Wallet</Button>
-        <Button
-          onClick={() => {
-            if (connector) {
-              connect({ connector });
-            }
-          }}
-          disabled={isPending || !connector}
-        >
+        <Button onClick={() => setOpenConnectorPicker(true)} disabled={isPending || !connectors.length}>
           <Wallet size={18} aria-hidden="true" />
           Connect
         </Button>
+        <ConnectWalletPicker
+          open={openConnectorPicker}
+          onClose={() => {
+            setOpenConnectorPicker(false);
+            setConnectError("");
+          }}
+          connectors={connectors}
+          connectError={connectError}
+          isPending={isPending}
+          onConnect={async (connector) => {
+            setConnectError("");
+            try {
+              await connectAsync({ connector, chainId: ARC_CHAIN_ID });
+              setOpenConnectorPicker(false);
+            } catch (error) {
+              setConnectError(error instanceof Error ? error.message : "Wallet connection failed.");
+            }
+          }}
+        />
       </div>
     );
   }
@@ -159,6 +170,61 @@ export function WalletControls({
           </motion.div>
         ) : null}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function ConnectWalletPicker({
+  open,
+  onClose,
+  connectors,
+  isPending,
+  connectError,
+  onConnect
+}: {
+  open: boolean;
+  onClose: () => void;
+  connectors: ReturnType<typeof useConnect>["connectors"];
+  isPending: boolean;
+  connectError: string;
+  onConnect: (connector: ReturnType<typeof useConnect>["connectors"][number]) => Promise<void>;
+}) {
+  if (!open) {
+    return null;
+  }
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-end bg-black/60 p-3 backdrop-blur-sm sm:place-items-center"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <Card className="w-full max-w-md p-5" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-black">Connect Wallet</h2>
+          <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close wallet picker">
+            <X size={18} aria-hidden="true" />
+          </Button>
+        </div>
+        <p className="mt-2 text-sm text-muted">Select a wallet provider to continue.</p>
+        <div className="mt-4 grid gap-2">
+          {connectors.map((connector) => (
+            <Button
+              key={connector.uid}
+              variant="secondary"
+              className="w-full justify-start"
+              onClick={() => void onConnect(connector)}
+              disabled={isPending}
+            >
+              <Wallet size={16} aria-hidden="true" />
+              {connector.name}
+            </Button>
+          ))}
+        </div>
+        {connectError ? <p className="mt-3 rounded-xl border border-loss/25 bg-loss/10 p-3 text-sm font-bold text-loss">{connectError}</p> : null}
+      </Card>
     </div>
   );
 }
