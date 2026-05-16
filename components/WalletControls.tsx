@@ -57,8 +57,8 @@ export function WalletControls({
 
   if (!activeAddress) {
     return (
-      <div className="flex items-center gap-2">
-        <Button variant="secondary" onClick={onCreateWallet}>Create Wallet</Button>
+      <div className="flex min-w-0 items-center gap-2">
+        <Button className="hidden sm:inline-flex" variant="secondary" onClick={onCreateWallet}>Create Wallet</Button>
         <Button onClick={() => setOpenConnectorPicker(true)} disabled={isPending || !connectors.length}>
           <Wallet size={18} aria-hidden="true" />
           Connect
@@ -87,7 +87,7 @@ export function WalletControls({
   }
 
   return (
-    <div className="relative flex items-center gap-2" ref={wrapRef}>
+    <div className="relative flex min-w-0 shrink-0 items-center gap-2" ref={wrapRef}>
       {showDisconnected ? (
         <Badge className="hidden border-white/20 bg-white/10 text-white/80 sm:inline-flex">
           <span className="mr-1.5 h-2 w-2 rounded-full bg-white/70" />
@@ -114,7 +114,7 @@ export function WalletControls({
         </Badge>
       )}
       <button
-        className="focus-ring flex min-h-11 items-center gap-2 rounded-2xl border border-line bg-white/[0.08] px-3 py-2 text-left"
+        className="focus-ring flex min-h-11 max-w-[8.5rem] items-center gap-2 rounded-2xl border border-line bg-white/[0.08] px-3 py-2 text-left sm:max-w-none"
         type="button"
         onClick={() => setOpen((value) => !value)}
       >
@@ -122,7 +122,7 @@ export function WalletControls({
           <p className="text-xs font-bold text-white">{shortAddress(activeAddress)}</p>
           <p className="text-[11px] text-muted">{formattedBalance ? `${formattedBalance} ${balance?.symbol}` : arcTestnet.name}</p>
         </div>
-        <div className="sm:hidden">
+        <div className="min-w-0 sm:hidden">
           <p className="text-xs font-bold text-white">{shortAddress(activeAddress, 3)}</p>
         </div>
         <ChevronDown size={16} className={`text-muted transition ${open ? "rotate-180" : ""}`} aria-hidden="true" />
@@ -148,7 +148,7 @@ export function WalletControls({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.16 }}
-            className="absolute right-0 top-14 z-50 w-72 rounded-2xl border border-line bg-surface/95 p-4 shadow-soft backdrop-blur-xl"
+            className="absolute right-0 top-14 z-50 w-[min(18rem,calc(100dvw-2rem))] rounded-2xl border border-line bg-surface/95 p-4 shadow-soft backdrop-blur-xl"
           >
             <p className="text-xs font-bold uppercase text-muted">Wallet Address</p>
             <p className="mt-2 break-all text-sm font-semibold text-white">{activeAddress}</p>
@@ -214,7 +214,7 @@ function ConnectWalletPicker({
         }
       }}
     >
-      <Card className="w-full max-w-md p-5" onMouseDown={(event) => event.stopPropagation()}>
+      <Card className="w-full max-w-md overflow-x-hidden p-5" onMouseDown={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-black">Connect Wallet</h2>
           <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close wallet picker">

@@ -171,10 +171,10 @@ export function ArcOneApp() {
   }
 
   return (
-    <div className="min-h-[100dvh] overflow-x-hidden pb-[calc(7.25rem+env(safe-area-inset-bottom))] lg:pb-0 lg:pl-24">
+    <div className="arc-one-shell min-h-[100dvh] w-full overflow-x-clip pb-[calc(7.25rem+env(safe-area-inset-bottom))] lg:pb-0 lg:pl-24">
       <SidebarNav active={active} onChange={setActive} />
       <BottomNav active={active} onChange={setActive} />
-      <main className="mx-auto w-full max-w-md px-4 py-6 sm:max-w-3xl sm:px-6 lg:max-w-7xl lg:px-8">
+      <main className="arc-one-main mx-auto w-full max-w-[30rem] px-4 py-5 sm:max-w-3xl sm:px-6 sm:py-6 lg:max-w-7xl lg:px-8">
         <Header
           onCreateWallet={() => setPanel("wallets")}
           onLogout={handleLogout}
@@ -184,7 +184,7 @@ export function ArcOneApp() {
           onSwitchArcNetwork={() => void network.switchNetwork()}
         />
         {status ? <div className="mb-5 rounded-2xl border border-line bg-white/[0.06] p-3 text-sm font-bold text-white/82">{status}</div> : null}
-        <motion.div key={active} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
+        <motion.div className="w-full min-w-0 overflow-x-clip" key={active} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
           {active === "home" ? <HomePage address={address} balance={balance} loading={loadingBalance} faucetLoading={faucetLoading} onAction={(action) => {
             if (action === "Swap") {
               setActive("trade");
@@ -242,12 +242,12 @@ export function ArcOneApp() {
 
 function Onboarding({ onDone, onAddArcNetwork }: { onDone: () => void; onAddArcNetwork: () => void }) {
   return (
-    <main className="min-h-screen px-4 py-5 sm:px-6">
-      <div className="mx-auto grid min-h-[calc(100vh-2.5rem)] max-w-7xl items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
+    <main className="arc-one-shell min-h-[100dvh] w-full overflow-x-clip px-4 py-5 sm:px-6">
+      <div className="arc-one-mobile-frame mx-auto grid min-h-[calc(100dvh-2.5rem)] w-full max-w-[30rem] items-center gap-5 sm:max-w-3xl lg:max-w-7xl lg:grid-cols-[0.95fr_1.05fr] lg:gap-10">
         <div>
           <ArcLogo />
           <Badge className="mt-8 border-arcblue/30 bg-arcblue/10 text-arcblue">Powered by Arc Testnet</Badge>
-          <h1 className="mt-5 max-w-3xl text-5xl font-black tracking-normal text-white sm:text-7xl">Your crypto finance operating system.</h1>
+          <h1 className="mt-5 max-w-3xl text-4xl font-black tracking-normal text-white sm:text-6xl lg:text-7xl">Your crypto finance operating system.</h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
             Start empty, create a secure wallet, claim testnet funds, then send, invoice, and manage real Arc Testnet activity.
           </p>
@@ -287,8 +287,8 @@ function Header({
   onSwitchArcNetwork: () => void;
 }) {
   return (
-    <header className="mb-6 flex items-center justify-between gap-3">
-      <ArcLogo className="min-w-0" />
+    <header className="mb-5 flex w-full min-w-0 items-center justify-between gap-2 sm:mb-6 sm:gap-3">
+      <ArcLogo className="min-w-0 flex-1" />
       <WalletControls
         onCreateWallet={onCreateWallet}
         onLogout={onLogout}
@@ -319,14 +319,14 @@ function HomePage({
   onFaucet: () => void;
 }) {
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_23rem] xl:gap-5">
-      <section className="space-y-4 sm:space-y-5">
+    <div className="grid w-full min-w-0 gap-4 overflow-x-clip xl:grid-cols-[minmax(0,1fr)_23rem] xl:gap-5">
+      <section className="min-w-0 space-y-4 sm:space-y-5">
         <BalanceCard address={address} balance={balance} symbol={arcTestnet.nativeCurrency.symbol} loading={loading} faucetLoading={faucetLoading} onRefresh={onRefresh} onFaucet={onFaucet} />
         <QuickActionGrid onAction={onAction} />
         <AssetTable balance={balance} symbol={arcTestnet.nativeCurrency.symbol} />
         <ActivityFeed />
       </section>
-      <aside className="space-y-4 sm:space-y-5">
+      <aside className="min-w-0 space-y-4 sm:space-y-5">
         <NetworkPanel onRefresh={onRefresh} />
         <RoadmapWall />
         <TrustPanel />
@@ -343,8 +343,8 @@ function PaymentsPage({ onAction, onPanel }: { onAction: (action: string) => voi
   ];
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_24rem]">
-      <section className="space-y-5">
+    <div className="grid w-full min-w-0 gap-5 overflow-x-clip lg:grid-cols-[minmax(0,1fr)_24rem]">
+      <section className="min-w-0 space-y-5">
         <Card className="p-5">
           <h1 className="text-2xl font-black">Payments Hub</h1>
           <p className="mt-2 text-muted">Validate, preview, sign, and record payments. No fake success states.</p>
@@ -363,7 +363,7 @@ function PaymentsPage({ onAction, onPanel }: { onAction: (action: string) => voi
         </Card>
         <InvoiceBuilder />
       </section>
-      <aside className="space-y-5">
+      <aside className="min-w-0 space-y-5">
         <MerchantDashboard onPanel={onPanel} />
         <ComingSoonCard title="Split Bill" body="Preview group payment requests and settlement rules before this feature ships." />
         <ComingSoonCard title="Subscriptions" body="Recurring crypto approvals will require explicit user spending limits." />
@@ -374,7 +374,7 @@ function PaymentsPage({ onAction, onPanel }: { onAction: (action: string) => voi
 
 function TradePage({ balance }: { balance: string }) {
   return (
-    <div className="grid gap-5 lg:grid-cols-[24rem_1fr]">
+    <div className="grid w-full min-w-0 gap-5 overflow-x-clip lg:grid-cols-[24rem_minmax(0,1fr)]">
       <SwapWidget balance={balance} symbol={arcTestnet.nativeCurrency.symbol} />
       <section className="space-y-5">
         <Card className="p-5">
@@ -407,13 +407,13 @@ function ProfilePage({ address, onPanel }: { address: string; onPanel: (panel: P
   ];
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
+    <div className="grid w-full min-w-0 gap-5 overflow-x-clip lg:grid-cols-[minmax(0,1fr)_22rem]">
       <Card className="p-5">
-      <div className="flex items-center gap-4">
+      <div className="flex min-w-0 items-center gap-4">
           <WalletAvatar label={profile.username || "AO"} />
-          <div>
+          <div className="min-w-0">
             <h1 className="text-2xl font-black">{profile.username || "Unnamed account"}</h1>
-            <p className="text-muted">{address}</p>
+            <p className="break-all text-sm text-muted">{address}</p>
           </div>
         </div>
         <div className="mt-6 divide-y divide-line">
@@ -471,7 +471,7 @@ function ActivityFeed() {
 function NetworkPanel({ onRefresh }: { onRefresh: () => void }) {
   return (
     <Card className="p-4">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex min-w-0 items-center justify-between gap-3">
         <h2 className="text-lg font-black">Arc Testnet</h2>
         <Zap size={18} className="text-arcblue" aria-hidden="true" />
       </div>
@@ -592,7 +592,7 @@ function SettingsPanel({ panel, onClose, onAddArcNetwork }: { panel: Panel; onCl
         }
       }}
     >
-      <Card className="max-h-[90vh] w-full max-w-xl overflow-y-auto p-5" onMouseDown={(event) => event.stopPropagation()}>
+      <Card className="max-h-[90dvh] w-full max-w-xl overflow-y-auto overflow-x-hidden p-5" onMouseDown={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between">
         <h2 className="text-2xl font-black capitalize">{String(panel).replace("-", " ")}</h2>
           <Button size="icon" variant="ghost" onClick={onClose}>x</Button>
@@ -702,7 +702,7 @@ function WrongNetworkModal({
         }
       }}
     >
-      <Card className="w-full max-w-md p-5" onMouseDown={(event) => event.stopPropagation()}>
+      <Card className="w-full max-w-md overflow-x-hidden p-5" onMouseDown={(event) => event.stopPropagation()}>
         <h2 className="text-xl font-black">You are connected to Ethereum.</h2>
         <p className="mt-2 text-sm text-muted">Switch to Arc Testnet to continue.</p>
         <div className="mt-5 grid gap-2 sm:grid-cols-2">

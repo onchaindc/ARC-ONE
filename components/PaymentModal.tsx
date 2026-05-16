@@ -104,9 +104,9 @@ export function PaymentModal({
         }
       }}
     >
-      <Card className="w-full max-w-lg p-5" onMouseDown={(event) => event.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <div>
+      <Card className="max-h-[92dvh] w-full max-w-lg overflow-y-auto overflow-x-hidden p-5" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <div className="min-w-0">
             <p className="text-xs font-bold uppercase text-arcblue">{mode}</p>
             <h2 className="mt-1 text-2xl font-black">{isReceive ? "Receive Funds" : isMerchant ? "Pay Merchant" : "Send Payment"}</h2>
           </div>
@@ -176,16 +176,16 @@ export function PaymentModal({
               </label>
               <label className="grid gap-2 text-sm font-bold text-muted">
                 Amount
-                <div className="flex rounded-2xl border border-line bg-black/20">
+                <div className="flex min-w-0 rounded-2xl border border-line bg-black/20">
                   <input className="min-w-0 flex-1 bg-transparent px-4 py-3 text-2xl font-black text-white outline-none" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.00" />
                   {isMerchant ? (
-                    <select className="bg-transparent px-4 text-sm font-black text-white outline-none" value={merchantToken} onChange={(event) => setMerchantToken(event.target.value)}>
+                    <select className="max-w-24 bg-transparent px-3 text-sm font-black text-white outline-none sm:max-w-none sm:px-4" value={merchantToken} onChange={(event) => setMerchantToken(event.target.value)}>
                       {["USDC", "ETH", "WBTC", "EURC"].map((token) => (
                         <option key={token} value={token} className="bg-surface">{token}</option>
                       ))}
                     </select>
                   ) : (
-                    <span className="flex items-center px-4 text-sm font-black text-white">{arcTestnet.nativeCurrency.symbol}</span>
+                    <span className="flex shrink-0 items-center px-3 text-sm font-black text-white sm:px-4">{arcTestnet.nativeCurrency.symbol}</span>
                   )}
                 </div>
               </label>

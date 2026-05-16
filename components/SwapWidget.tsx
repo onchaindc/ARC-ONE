@@ -31,7 +31,7 @@ export function SwapWidget({ balance, symbol }: { balance: string; symbol: strin
 
   return (
     <Card className="p-4 sm:p-5">
-      <div className="flex items-center justify-between">
+      <div className="flex min-w-0 items-center justify-between gap-3">
         <h2 className="text-lg font-black">Swap</h2>
         <Badge>Router Required</Badge>
       </div>
@@ -83,7 +83,7 @@ function SwapInput({
   return (
     <div className="mt-4 rounded-2xl border border-line bg-black/20 p-4">
       <label className="text-xs font-bold uppercase text-muted">{label}</label>
-      <div className="mt-2 flex items-center gap-3">
+      <div className="mt-2 flex min-w-0 items-center gap-3">
         <input
           className="min-w-0 flex-1 bg-transparent text-2xl font-black outline-none placeholder:text-white/30"
           value={amount}
@@ -91,7 +91,7 @@ function SwapInput({
           onChange={(event) => setAmount(event.target.value)}
           readOnly={readOnly}
         />
-        <select className="rounded-2xl border border-line bg-surface px-3 py-2 text-sm font-bold text-white" value={token} onChange={(event) => setToken(event.target.value)}>
+        <select className="max-w-24 rounded-2xl border border-line bg-surface px-3 py-2 text-sm font-bold text-white sm:max-w-none" value={token} onChange={(event) => setToken(event.target.value)}>
           {tokens.map((item) => (
             <option key={item} value={item}>{item}</option>
           ))}

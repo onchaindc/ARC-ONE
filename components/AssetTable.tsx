@@ -8,22 +8,22 @@ export function AssetTable({ balance, symbol }: { balance: string; symbol: strin
 
   return (
     <Card className="p-4">
-      <div className="mb-3 flex items-center justify-between px-1">
+      <div className="mb-3 flex min-w-0 items-center justify-between gap-3 px-1">
         <h2 className="text-lg font-black">Portfolio</h2>
         <span className="text-sm font-bold text-muted">Arc Testnet</span>
       </div>
       {hasBalance ? (
         <div className="rounded-2xl p-3 transition hover:bg-white/[0.06]">
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-black">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-black">
               <CircleDollarSign size={20} aria-hidden="true" />
             </span>
             <div className="min-w-0 flex-1">
               <p className="font-black text-white">{symbol}</p>
               <p className="text-sm text-muted">Native Arc Testnet asset</p>
             </div>
-            <div className="text-right">
-              <p className="font-black text-white">{Number(balance).toLocaleString("en-US", { maximumFractionDigits: 6 })}</p>
+            <div className="min-w-0 text-right">
+              <p className="break-words font-black text-white">{Number(balance).toLocaleString("en-US", { maximumFractionDigits: 6 })}</p>
               <p className="text-sm font-bold text-muted">Balance</p>
             </div>
           </div>

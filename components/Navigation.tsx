@@ -31,12 +31,12 @@ export function SidebarNav({ active, onChange }: { active: NavId; onChange: (id:
 
 export function BottomNav({ active, onChange }: { active: NavId; onChange: (id: NavId) => void }) {
   return (
-    <nav className="fixed left-4 right-4 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 grid grid-cols-5 gap-1 rounded-3xl border border-line bg-[#090d18]/92 p-2 shadow-soft backdrop-blur-xl lg:hidden">
+    <nav className="fixed inset-x-3 bottom-[calc(0.65rem+env(safe-area-inset-bottom))] z-40 grid max-w-[calc(100dvw-1.5rem)] grid-cols-5 gap-1 rounded-3xl border border-line bg-[#090d18]/92 p-1.5 shadow-soft backdrop-blur-xl sm:inset-x-4 sm:max-w-none sm:p-2 lg:hidden">
       {navItems.map((item) => (
         <button
           key={item.id}
           className={cn(
-            "focus-ring flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] font-bold transition",
+            "focus-ring flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-0.5 text-[10px] font-bold transition sm:px-1 sm:text-[11px]",
             active === item.id ? "bg-white text-black" : "text-muted hover:bg-white/10 hover:text-white"
           )}
           onClick={() => onChange(item.id)}

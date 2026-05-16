@@ -2,11 +2,11 @@ import { cn } from "@/lib/utils";
 
 export function ArcLogo({ compact = false, className }: { compact?: boolean; className?: string }) {
   return (
-    <div className={cn("flex items-center gap-3", className)}>
-      <ArcMark className="h-10 w-10" />
+    <div className={cn("flex min-w-0 items-center gap-3", className)}>
+      <ArcMark className="h-10 w-10 shrink-0" />
       {!compact ? (
-        <div className="leading-none">
-          <p className="text-lg font-black tracking-normal text-white">ARC ONE</p>
+        <div className="min-w-0 leading-none">
+          <p className="truncate text-lg font-black tracking-normal text-white">ARC ONE</p>
           <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.18em] text-muted">Finance OS</p>
         </div>
       ) : null}
