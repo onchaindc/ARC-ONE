@@ -114,13 +114,16 @@ export function WalletControls({
         </Badge>
       )}
       <button
-        className="focus-ring flex items-center gap-2 rounded-2xl border border-line bg-white/[0.08] px-3 py-2 text-left"
+        className="focus-ring flex min-h-11 items-center gap-2 rounded-2xl border border-line bg-white/[0.08] px-3 py-2 text-left"
         type="button"
         onClick={() => setOpen((value) => !value)}
       >
         <div className="hidden sm:block">
           <p className="text-xs font-bold text-white">{shortAddress(activeAddress)}</p>
           <p className="text-[11px] text-muted">{formattedBalance ? `${formattedBalance} ${balance?.symbol}` : arcTestnet.name}</p>
+        </div>
+        <div className="sm:hidden">
+          <p className="text-xs font-bold text-white">{shortAddress(activeAddress, 3)}</p>
         </div>
         <ChevronDown size={16} className={`text-muted transition ${open ? "rotate-180" : ""}`} aria-hidden="true" />
       </button>

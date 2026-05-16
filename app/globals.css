@@ -36,10 +36,11 @@ body {
   overflow-x: hidden;
   position: relative;
   -webkit-text-size-adjust: 100%;
+  min-height: 100dvh;
 }
 
 body {
-  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   background:
     radial-gradient(circle at 15% -10%, rgba(47, 140, 255, 0.28), transparent 28rem),
