@@ -171,7 +171,7 @@ export function ArcOneApp() {
   }
 
   return (
-    <div className="min-h-screen pb-24 lg:pb-0 lg:pl-24">
+    <div className="min-h-screen overflow-x-hidden pb-32 lg:pb-0 lg:pl-24">
       <SidebarNav active={active} onChange={setActive} />
       <BottomNav active={active} onChange={setActive} />
       <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8">

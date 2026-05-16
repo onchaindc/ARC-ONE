@@ -32,8 +32,9 @@
 
 html,
 body {
-  max-width: 100%;
+  width: 100%;
   overflow-x: hidden;
+  position: relative;
 }
 
 body {
@@ -113,20 +114,9 @@ textarea {
   color: #ffffff !important;
 }
 
-/* iOS/mobile Safari backdrop artifact guard */
+/* iOS/mobile Safari layering guard */
 @media (max-width: 1023px) {
-  .surface,
-  .backdrop-blur-xl,
-  .backdrop-blur-sm {
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
-  }
-
-  .surface {
-    background: rgba(9, 13, 24, 0.94) !important;
-  }
-
-  :root[data-theme="light"] .surface {
-    background: rgba(255, 255, 255, 0.98) !important;
+  body {
+    background-attachment: scroll;
   }
 }

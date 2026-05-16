@@ -22,6 +22,16 @@ export function WalletOnboarding({ onDone }: { onDone: () => void }) {
   const { setWalletMode, setEmbeddedAddress, upsertWallet } = useAppStore();
   const storedWallet = getEmbeddedWalletRecord();
 
+  const labelFor = (connector: (typeof connectors)[number]) => {
+    if (connector.type === "injected") {
+      return "Browser Wallet";
+    }
+    if (connector.type === "walletConnect") {
+      return "WalletConnect";
+    }
+    return connector.name;
+  };
+
   async function createWallet() {
     setError("");
     try {
@@ -145,7 +155,7 @@ export function WalletOnboarding({ onDone }: { onDone: () => void }) {
               {connectors.map((connector) => (
                 <Button key={connector.uid} variant="secondary" className="w-full justify-start" onClick={() => void connectWallet(connector)} disabled={isPending}>
                   <Wallet size={16} aria-hidden="true" />
-                  {connector.name}
+                  {labelFor(connector)}
                 </Button>
               ))}
             </div>

@@ -189,6 +189,16 @@ function ConnectWalletPicker({
   connectError: string;
   onConnect: (connector: ReturnType<typeof useConnect>["connectors"][number]) => Promise<void>;
 }) {
+  const labelFor = (connector: ReturnType<typeof useConnect>["connectors"][number]) => {
+    if (connector.type === "injected") {
+      return "Browser Wallet";
+    }
+    if (connector.type === "walletConnect") {
+      return "WalletConnect";
+    }
+    return connector.name;
+  };
+
   if (!open) {
     return null;
   }
@@ -219,7 +229,7 @@ function ConnectWalletPicker({
               disabled={isPending}
             >
               <Wallet size={16} aria-hidden="true" />
-              {connector.name}
+              {labelFor(connector)}
             </Button>
           ))}
         </div>

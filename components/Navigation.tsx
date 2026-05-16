@@ -31,7 +31,7 @@ export function SidebarNav({ active, onChange }: { active: NavId; onChange: (id:
 
 export function BottomNav({ active, onChange }: { active: NavId; onChange: (id: NavId) => void }) {
   return (
-    <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 rounded-3xl border border-line bg-[#090d18]/88 p-2 shadow-soft backdrop-blur-xl lg:hidden">
+    <nav className="fixed left-3 right-3 bottom-3 z-40 grid grid-cols-5 rounded-3xl border border-line bg-[#090d18]/88 p-2 shadow-soft backdrop-blur-xl lg:hidden">
       {navItems.map((item) => (
         <button
           key={item.id}

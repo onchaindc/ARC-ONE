@@ -3,20 +3,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { createConfig, http, WagmiProvider } from "wagmi";
-import { coinbaseWallet, injected, metaMask, walletConnect } from "wagmi/connectors";
+import { injected, walletConnect } from "wagmi/connectors";
 import { arcTestnet } from "@/lib/arc";
 
 const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 const connectors = [
-  metaMask({
-    dappMetadata: {
-      name: "ARC ONE",
-      url: "https://github.com/onchaindc/ARC-ONE"
-    }
-  }),
-  coinbaseWallet({
-    appName: "ARC ONE"
-  }),
   injected({ shimDisconnect: true })
 ];
 
