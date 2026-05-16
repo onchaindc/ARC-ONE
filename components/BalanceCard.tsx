@@ -33,7 +33,7 @@ export function BalanceCard({
         <div>
           <p className="text-sm font-semibold text-muted">Arc Testnet balance</p>
           <motion.h2
-            className="mt-3 text-4xl font-black tracking-normal text-white sm:text-6xl"
+            className="mt-3 text-5xl font-black tracking-normal text-white sm:text-6xl"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
           >
@@ -48,7 +48,7 @@ export function BalanceCard({
           </div>
         </div>
         <div className="flex flex-col gap-2 sm:items-end">
-          <Button variant="secondary" onClick={onRefresh} disabled={!address || loading}>
+          <Button className="min-h-14" variant="secondary" onClick={onRefresh} disabled={!address || loading}>
             <RefreshCw size={17} className={loading ? "animate-spin" : ""} aria-hidden="true" />
             Refresh Balance
           </Button>

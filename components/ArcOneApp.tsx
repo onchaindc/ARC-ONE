@@ -171,10 +171,10 @@ export function ArcOneApp() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden pb-32 lg:pb-0 lg:pl-24">
+    <div className="min-h-screen overflow-x-hidden pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0 lg:pl-24">
       <SidebarNav active={active} onChange={setActive} />
       <BottomNav active={active} onChange={setActive} />
-      <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+      <main className="mx-auto w-full max-w-md px-4 py-6 sm:max-w-3xl sm:px-6 lg:max-w-7xl lg:px-8">
         <Header
           onCreateWallet={() => setPanel("wallets")}
           onLogout={handleLogout}
@@ -287,7 +287,7 @@ function Header({
   onSwitchArcNetwork: () => void;
 }) {
   return (
-    <header className="mb-5 flex items-center justify-between gap-3">
+    <header className="mb-6 flex items-center justify-between gap-3">
       <ArcLogo className="min-w-0" />
       <WalletControls
         onCreateWallet={onCreateWallet}
@@ -319,14 +319,14 @@ function HomePage({
   onFaucet: () => void;
 }) {
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_23rem]">
-      <section className="space-y-5">
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_23rem] xl:gap-5">
+      <section className="space-y-4 sm:space-y-5">
         <BalanceCard address={address} balance={balance} symbol={arcTestnet.nativeCurrency.symbol} loading={loading} faucetLoading={faucetLoading} onRefresh={onRefresh} onFaucet={onFaucet} />
         <QuickActionGrid onAction={onAction} />
         <AssetTable balance={balance} symbol={arcTestnet.nativeCurrency.symbol} />
         <ActivityFeed />
       </section>
-      <aside className="space-y-5">
+      <aside className="space-y-4 sm:space-y-5">
         <NetworkPanel onRefresh={onRefresh} />
         <RoadmapWall />
         <TrustPanel />
